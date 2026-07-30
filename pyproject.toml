@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cross-device-gemma"
+version = "0.1.0"
+description = "Gemma 4 Unified image-embedding client/server proof of concept"
+requires-python = ">=3.10"
+dependencies = [
+  "pillow>=11.0",
+  "safetensors>=0.5",
+  "torch>=2.8",
+  "transformers>=5.12.1",
+]
+
+[project.scripts]
+gemma-split-export = "cross_device_gemma.export_split:main"
+gemma-split-client = "cross_device_gemma.client:main"
+gemma-split-server = "cross_device_gemma.server:main"
+gemma-split-verify = "cross_device_gemma.verify:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cross_device_gemma"]
