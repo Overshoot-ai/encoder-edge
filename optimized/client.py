@@ -15,7 +15,7 @@ from transformers.models.gemma4_unified.modeling_gemma4_unified import (
 )
 
 
-class ImageClient:
+class StreamingImageClient:
     def __init__(self, artifact: Path, server: str, model: str):
         self.server = server.rstrip("/")
         self.model = model
@@ -31,7 +31,7 @@ class ImageClient:
         self.embedder.load_state_dict(load_file(artifact / "vision.safetensors"))
         self.embedder.to(device=self.device, dtype=dtype).eval()
 
-    def ask(self, image: Image.Image, question: str) -> dict:
+    def stream(self, image: Image.Image, question: str):
         total_started = time.perf_counter()
         started = time.perf_counter()
         inputs = self.image_processor(
@@ -49,6 +49,7 @@ class ImageClient:
             torch.mps.synchronize()
         encode_ms = (time.perf_counter() - started) * 1000
         features = features[~positions.eq(-1).all(dim=-1)]
+
         started = time.perf_counter()
         buffer = io.BytesIO()
         torch.save(features.cpu().contiguous(), buffer)
@@ -71,6 +72,8 @@ class ImageClient:
                 ],
                 "max_tokens": 128,
                 "temperature": 0,
+                "stream": True,
+                "stream_options": {"include_usage": True},
             }
         ).encode()
         serialize_ms = (time.perf_counter() - started) * 1000
@@ -80,34 +83,54 @@ class ImageClient:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        started = time.perf_counter()
+        remote_started = time.perf_counter()
+        first_token_at = None
+        usage = None
         with urlopen(request, timeout=300) as response:
-            result = json.loads(response.read())
-        result["answer"] = result["choices"][0]["message"]["content"]
-        result["metrics"].update(
-            {
-                "client_preprocess_ms": preprocess_ms,
-                "client_encode_ms": encode_ms,
-                "client_serialize_ms": serialize_ms,
-                "request_bytes": len(payload),
-                "request_e2e_ms": (time.perf_counter() - started) * 1000,
-                "client_e2e_ms": (time.perf_counter() - total_started) * 1000,
-            }
-        )
-        return result
+            for line in response:
+                if not line.startswith(b"data: "):
+                    continue
+                data = line[6:].strip()
+                if data == b"[DONE]":
+                    break
+                event = json.loads(data)
+                usage = event.get("usage") or usage
+                choices = event.get("choices", [])
+                text = choices[0].get("delta", {}).get("content") if choices else None
+                if text:
+                    first_token_at = first_token_at or time.perf_counter()
+                    yield {"type": "token", "text": text}
+
+        finished = time.perf_counter()
+        yield {
+            "type": "done",
+            "client_preprocess_ms": preprocess_ms,
+            "client_encode_ms": encode_ms,
+            "client_serialize_ms": serialize_ms,
+            "request_bytes": len(payload),
+            "visual_tokens": features.shape[0],
+            "pipeline_ttft_ms": (first_token_at - total_started) * 1000,
+            "remote_ttft_ms": (first_token_at - remote_started) * 1000,
+            "pipeline_e2e_ms": (finished - total_started) * 1000,
+            "remote_e2e_ms": (finished - remote_started) * 1000,
+            "usage": usage,
+        }
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Run Gemma vision locally and send only its features"
-    )
+    parser = argparse.ArgumentParser()
     parser.add_argument("--artifact", type=Path, required=True)
     parser.add_argument("--server", required=True)
-    parser.add_argument("--model", default="gemma-4-12b")
+    parser.add_argument("--model", default="gemma-4-12b-optimized")
     parser.add_argument("--image", type=Path, required=True)
     parser.add_argument("--question", required=True)
     args = parser.parse_args()
-    client = ImageClient(args.artifact, args.server, args.model)
-    result = client.ask(Image.open(args.image), args.question)
-    print(result["answer"])
-    print(json.dumps(result["metrics"], indent=2))
+    client = StreamingImageClient(args.artifact, args.server, args.model)
+    for event in client.stream(Image.open(args.image), args.question):
+        print(event.get("text", ""), end="", flush=True)
+        if event["type"] == "done":
+            print("\n" + json.dumps(event, indent=2))
+
+
+if __name__ == "__main__":
+    main()

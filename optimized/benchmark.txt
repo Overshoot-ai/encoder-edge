@@ -1,0 +1,21 @@
+Compiled vLLM, persistent client, five warm requests
+median client preprocessing: 19.5 ms
+median client embedding: 25.2 ms
+median serialization: 9.9 ms
+median pipeline TTFT: 520.0 ms
+median remote TTFT: 466.1 ms
+median pipeline E2E: 969.0 ms
+median remote E2E: 915.1 ms
+completion tokens: 46
+effective post-first-token decode: about 100 tokens/s
+peak sampled H200 SM utilization: 84%
+
+Transformers baseline
+median pipeline E2E: 1526.3 ms for 25 tokens
+decode: 24.1 tokens/s
+
+Fidelity note
+The vLLM output consistently identifies the blue circle but describes the red
+square as a rectangle or bar on the synthetic sample. Enforce-eager produces
+the same description, so this difference is in the current vLLM Gemma 4 path,
+not CUDA graph capture or torch.compile.

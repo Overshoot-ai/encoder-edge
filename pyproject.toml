@@ -17,6 +17,7 @@ dependencies = [
 [project.scripts]
 gemma-split-export = "cross_device_gemma.export_split:main"
 gemma-split-client = "cross_device_gemma.client:main"
+gemma-split-frontend = "cross_device_gemma.frontend:main"
 gemma-split-server = "cross_device_gemma.server:main"
 gemma-split-verify = "cross_device_gemma.verify:main"
 

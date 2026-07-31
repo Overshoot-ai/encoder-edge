@@ -8,8 +8,12 @@ from safetensors.torch import save_file
 from transformers import AutoModelForMultimodalLM, AutoProcessor
 
 from . import MODEL_ID
+
+
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Export client-only and server-only Gemma artifacts")
+    parser = argparse.ArgumentParser(
+        description="Export client-only and server-only Gemma artifacts"
+    )
     parser.add_argument("--model", default=MODEL_ID)
     parser.add_argument("--revision", default=None)
     parser.add_argument("--output", type=Path, required=True)
@@ -42,7 +46,7 @@ def main() -> None:
     }
     save_file(vision_state, client_dir / "vision.safetensors")
     model.config.save_pretrained(client_dir)
-    processor.save_pretrained(client_dir)
+    processor.image_processor.save_pretrained(client_dir)
 
     vision_parameters = sum(parameter.numel() for parameter in vision.parameters())
 

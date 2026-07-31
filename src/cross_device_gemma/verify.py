@@ -6,14 +6,21 @@ from pathlib import Path
 import torch
 from PIL import Image
 from safetensors.torch import load_file
-from transformers import AutoConfig, AutoModelForMultimodalLM, AutoProcessor, AutoTokenizer
+from transformers import (
+    AutoConfig,
+    AutoModelForMultimodalLM,
+    AutoProcessor,
+    AutoTokenizer,
+)
 
 from . import MODEL_ID
 from .modeling import build_inputs_embeds
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Compare normal and split Gemma inference")
+    parser = argparse.ArgumentParser(
+        description="Compare normal and split Gemma inference"
+    )
     parser.add_argument("--client-artifact", type=Path, required=True)
     parser.add_argument("--server-artifact", type=Path, required=True)
     parser.add_argument("--image", type=Path, required=True)
@@ -25,7 +32,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    from transformers.models.gemma4_unified.modeling_gemma4_unified import Gemma4UnifiedVisionEmbedder
+    from transformers.models.gemma4_unified.modeling_gemma4_unified import (
+        Gemma4UnifiedVisionEmbedder,
+    )
 
     config = AutoConfig.from_pretrained(args.client_artifact)
     processor = AutoProcessor.from_pretrained(args.client_artifact)
@@ -65,14 +74,22 @@ def main() -> None:
         "attention_mask": inputs["attention_mask"],
         "mm_token_type_ids": inputs["mm_token_type_ids"],
     }
-    full_model = AutoModelForMultimodalLM.from_pretrained(
-        args.model,
-        dtype=torch.bfloat16,
-    ).to("cuda").eval()
-    server_model = AutoModelForMultimodalLM.from_pretrained(
-        args.server_artifact,
-        dtype=torch.bfloat16,
-    ).to("cuda").eval()
+    full_model = (
+        AutoModelForMultimodalLM.from_pretrained(
+            args.model,
+            dtype=torch.bfloat16,
+        )
+        .to("cuda")
+        .eval()
+    )
+    server_model = (
+        AutoModelForMultimodalLM.from_pretrained(
+            args.server_artifact,
+            dtype=torch.bfloat16,
+        )
+        .to("cuda")
+        .eval()
+    )
     if server_model.model.embed_vision is not None:
         raise RuntimeError("Server artifact unexpectedly loaded an image embedder")
 
@@ -83,10 +100,14 @@ def main() -> None:
         "attention_mask": inputs["attention_mask"].to("cuda"),
         "mm_token_type_ids": inputs["mm_token_type_ids"].to("cuda"),
     }
-    input_ids, attention_mask, token_types, inputs_embeds = build_inputs_embeds(server_model, tensors)
+    input_ids, attention_mask, token_types, inputs_embeds = build_inputs_embeds(
+        server_model, tensors
+    )
 
     with torch.inference_mode():
-        normal_logits = full_model(**normal_inputs, use_cache=False, logits_to_keep=1).logits.float()
+        normal_logits = full_model(
+            **normal_inputs, use_cache=False, logits_to_keep=1
+        ).logits.float()
         split_logits = server_model(
             inputs_embeds=inputs_embeds,
             attention_mask=attention_mask,
@@ -118,7 +139,11 @@ def main() -> None:
     print(f"visual_tokens={image_features.shape[0]}")
     print(f"max_logit_difference={max_logit_difference:.8f}")
     print(f"generated_tokens_equal={tokens_equal}")
-    print(f"normal_answer={tokenizer.decode(normal_generated, skip_special_tokens=True).strip()}")
-    print(f"split_answer={tokenizer.decode(split_generated, skip_special_tokens=True).strip()}")
+    print(
+        f"normal_answer={tokenizer.decode(normal_generated, skip_special_tokens=True).strip()}"
+    )
+    print(
+        f"split_answer={tokenizer.decode(split_generated, skip_special_tokens=True).strip()}"
+    )
     if not tokens_equal:
         raise SystemExit("Split generation differs from normal generation")

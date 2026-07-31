@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cross-Device Gemma Architecture</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; background: #f6f3eb; color: #1d211d; font: 16px/1.4 ui-rounded, "SF Pro Rounded", system-ui, sans-serif; }
+  main { max-width: 1500px; margin: 0 auto; padding: 28px; }
+  h1 { margin: 0 0 4px; font-size: 25px; }
+  p { margin: 0 0 20px; color: #596159; }
+  .canvas { overflow-x: auto; border: 1px solid #c8c3b7; border-radius: 18px; background: #fffdf8; box-shadow: 0 12px 35px #3a33231a; }
+  svg { display: block; min-width: 1250px; width: 100%; height: auto; }
+  .boundary { fill: #fff; stroke: #252a25; stroke-width: 3; }
+  .runtime { fill: #edf5ef; stroke: #3c7653; stroke-width: 3; stroke-dasharray: 10 7; }
+  .box { fill: #fff; stroke: #353b35; stroke-width: 2.2; }
+  .image-box { fill: #fff1e8; stroke: #a64f22; }
+  .prompt-box { fill: #f2efff; stroke: #6c56a5; }
+  .client-step { fill: #f8f2df; stroke: #96762a; }
+  .server-step { fill: #f5fbf6; stroke: #4b7358; }
+  .merge { fill: #e4f1e8; stroke: #356146; stroke-width: 2.5; }
+  .no-vision { fill: #fff0ef; stroke: #a84642; stroke-width: 2; }
+  text { fill: #202520; text-anchor: middle; dominant-baseline: middle; }
+  .title { font-size: 23px; font-weight: 750; text-anchor: start; }
+  .runtime-title { fill: #28553a; font-size: 20px; font-weight: 750; text-anchor: start; }
+  .label { font-size: 16px; font-weight: 650; }
+  .small { fill: #5f685f; font-size: 13px; font-weight: 500; }
+  .arrow { fill: none; stroke: #303630; stroke-width: 2.4; marker-end: url(#arrow); }
+  .image-arrow { stroke: #a64f22; }
+  .prompt-arrow { stroke: #6c56a5; }
+  .return-arrow { stroke: #24714a; stroke-width: 3; marker-end: url(#green-arrow); }
+  .boundary-label { fill: #616861; font-size: 13px; letter-spacing: .04em; }
+  code { padding: 2px 6px; border-radius: 5px; background: #ebe7dc; }
+  .walkthrough { margin-top: 22px; padding: 24px; border: 1px solid #c8c3b7; border-radius: 18px; background: #fffdf8; }
+  .walkthrough h2 { margin: 0 0 6px; font-size: 21px; }
+  .walkthrough > p { margin-bottom: 18px; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .step { padding: 18px; border: 1px solid #cbc7bd; border-radius: 14px; background: #fff; }
+  .step strong { display: block; margin-bottom: 10px; }
+  .sequence { overflow-x: auto; margin-top: 12px; padding: 12px; border-radius: 10px; background: #242824; color: #eef4ee; font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; }
+  .text-vector { color: #c9b8ff; }
+  .visual-vector { color: #ffad7d; }
+  .slot { color: #99a39b; }
+  .result { margin-top: 14px; padding: 14px 18px; border-left: 5px solid #356146; background: #e4f1e8; border-radius: 8px; }
+  .primer { margin-top: 22px; padding: 24px; border: 1px solid #c8c3b7; border-radius: 18px; background: #fffdf8; }
+  .primer h2, .primer h3 { margin: 0 0 8px; }
+  .primer > p { margin-bottom: 18px; }
+  .concepts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+  .concept { padding: 15px; border: 1px solid #cbc7bd; border-radius: 13px; background: #fff; }
+  .concept b { display: block; margin-bottom: 8px; }
+  .flow-grid { display: grid; grid-template-columns: 1fr 72px 1fr; align-items: stretch; gap: 12px; }
+  .flow-card { padding: 18px; border: 2px solid; border-radius: 15px; background: #fff; }
+  .flow-card.text { border-color: #6c56a5; background: #f8f6ff; }
+  .flow-card.image { border-color: #a64f22; background: #fff7f2; }
+  .flow-card h3 { font-size: 17px; }
+  .flow-arrow { display: grid; place-items: center; color: #356146; font-size: 34px; font-weight: 800; }
+  .equation { margin: 22px 0; padding: 20px; border: 2px solid #356146; border-radius: 15px; background: #edf5ef; text-align: center; }
+  .equation strong { display: block; margin-bottom: 12px; font-size: 18px; }
+  .not-this { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .no { padding: 12px; border: 1px solid #c87872; border-radius: 10px; background: #fff0ef; color: #812f2b; text-align: center; font-weight: 650; }
+  .position-table { width: 100%; margin-top: 14px; border-collapse: collapse; font-size: 14px; }
+  .position-table th, .position-table td { padding: 10px; border-bottom: 1px solid #d9d4c8; text-align: left; }
+  .position-table th { color: #596159; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+  .latent { margin-top: 18px; padding: 18px; border-radius: 14px; background: #f2efff; border-left: 5px solid #6c56a5; }
+  .handoff { margin-top: 22px; padding: 24px; border: 3px solid #356146; border-radius: 18px; background: #f4faf6; }
+  .handoff h2 { margin: 0 0 6px; }
+  .handoff > p { margin-bottom: 18px; }
+  .handoff-flow { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .handoff-step { position: relative; min-height: 112px; padding: 14px 12px; border: 1px solid #9db7a5; border-radius: 12px; background: #fff; font-size: 13px; }
+  .handoff-step b { display: block; margin-bottom: 7px; color: #28553a; font-size: 15px; }
+  .handoff-step:not(:last-child)::after { content: "→"; position: absolute; z-index: 2; top: 43px; right: -14px; color: #356146; font-size: 21px; font-weight: 800; }
+  .transport { margin-top: 22px; padding: 20px 24px; border: 2px solid #96762a; border-radius: 18px; background: #fffaf0; }
+  .transport h2 { margin: 0 0 6px; }
+  .transport > p { margin-bottom: 16px; }
+  .transport-flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 12px; }
+  .transport-item { min-height: 92px; padding: 14px; border: 1px solid #c8b889; border-radius: 12px; background: #fff; }
+  .transport-item b { display: block; margin-bottom: 7px; }
+  .transport-arrow { color: #96762a; font-size: 25px; font-weight: 800; }
+  @media (max-width: 850px) { main { padding: 14px; } .steps { grid-template-columns: 1fr; } }
+  @media (max-width: 850px) { .concepts { grid-template-columns: 1fr 1fr; } .flow-grid { grid-template-columns: 1fr; } .flow-arrow { transform: rotate(90deg); } .not-this { grid-template-columns: 1fr; } }
+  @media (max-width: 1100px) { .handoff-flow { grid-template-columns: 1fr 1fr; } .handoff-step:not(:last-child)::after { display: none; } }
+  @media (max-width: 850px) { .transport-flow { grid-template-columns: 1fr; } .transport-arrow { text-align: center; transform: rotate(90deg); } }
+</style>
+<main>
+  <h1>Cross-Device Gemma 4</h1>
+  <p>Raw pixels stay on the Mac. Only prompt text and projected visual embeddings cross the network.</p>
+  <div class="canvas">
+    <svg viewBox="0 0 1500 820" role="img" aria-labelledby="diagram-title diagram-desc">
+      <title id="diagram-title">Cross-device Gemma architecture</title>
+      <desc id="diagram-desc">A client processes an image locally on MPS and sends embeddings plus prompt text to an encoderless vLLM server on an H200.</desc>
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#303630"/>
+        </marker>
+        <marker id="green-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#24714a"/>
+        </marker>
+      </defs>
+
+      <!-- Machine boundaries -->
+      <rect class="boundary" x="30" y="45" width="600" height="700" rx="30"/>
+      <text class="title" x="60" y="78">CLIENT · Mac</text>
+      <text class="small" x="470" y="77">localhost · Apple MPS</text>
+
+      <rect class="boundary" x="850" y="45" width="620" height="700" rx="30"/>
+      <text class="title" x="880" y="78">SERVER · H200 VM</text>
+      <text class="small" x="1310" y="77">host: ali · NVIDIA H200</text>
+
+      <!-- Client input -->
+      <rect class="box image-box" x="75" y="115" width="205" height="78" rx="18"/>
+      <text class="label" x="177" y="145">Image</text>
+      <text class="small" x="177" y="171">raw pixels</text>
+
+      <rect class="box prompt-box" x="375" y="115" width="205" height="78" rx="18"/>
+      <text class="label" x="477" y="145">Prompt</text>
+      <text class="small" x="477" y="171">unchanged text</text>
+
+      <!-- Local image branch -->
+      <path class="arrow image-arrow" d="M177 193 L177 225"/>
+      <rect class="box client-step" x="75" y="225" width="205" height="82" rx="16"/>
+      <text class="label" x="177" y="253">AutoImageProcessor</text>
+      <text class="small" x="177" y="280">resize + patchify + 2D positions</text>
+
+      <path class="arrow image-arrow" d="M177 307 L177 340"/>
+      <rect class="box client-step" x="75" y="340" width="205" height="95" rx="16"/>
+      <text class="label" x="177" y="370">Gemma vision embedder</text>
+      <text class="small" x="177" y="395">original 49.9M parameters</text>
+      <text class="small" x="177" y="416">runs locally on MPS BF16</text>
+
+      <path class="arrow image-arrow" d="M177 435 L177 468"/>
+      <rect class="box client-step" x="75" y="468" width="205" height="82" rx="16"/>
+      <text class="label" x="177" y="496">Visual embeddings</text>
+      <text class="small" x="177" y="522">example: [264, 3840] BF16</text>
+
+      <path class="arrow image-arrow" d="M177 550 L177 582"/>
+      <rect class="box client-step" x="75" y="582" width="205" height="92" rx="16"/>
+      <text class="label" x="177" y="611">Package tensor for JSON</text>
+      <text class="small" x="177" y="637">torch.save → binary</text>
+      <text class="small" x="177" y="657">binary → base64 for JSON</text>
+
+      <!-- Prompt bypass and package -->
+      <path class="arrow prompt-arrow" d="M477 193 C477 360 477 540 365 620"/>
+      <text class="small" x="489" y="365">no local tokenization</text>
+
+      <path class="arrow image-arrow" d="M280 628 L335 628"/>
+      <rect class="box merge" x="335" y="575" width="250" height="105" rx="18"/>
+      <text class="label" x="460" y="607">Chat Completions JSON</text>
+      <text class="small" x="460" y="633">prompt text + image_embeds</text>
+      <text class="small" x="460" y="655">stream: true</text>
+
+      <!-- Network request -->
+      <path class="arrow" d="M585 628 C700 628 745 160 900 160"/>
+      <text class="label" x="744" y="375">POST /v1/chat/completions</text>
+      <text class="small" x="744" y="401">HTTP through SSH tunnel</text>
+      <text class="boundary-label" x="740" y="710">CLIENT / SERVER BOUNDARY</text>
+
+      <!-- vLLM boundary -->
+      <rect class="runtime" x="885" y="105" width="550" height="590" rx="24"/>
+      <text class="runtime-title" x="910" y="132">vLLM runtime</text>
+
+      <rect class="box server-step" x="960" y="150" width="400" height="65" rx="15"/>
+      <text class="label" x="1160" y="174">OpenAI-compatible API server</text>
+      <text class="small" x="1160" y="197">parse JSON request</text>
+
+      <path class="arrow" d="M1080 215 L1015 250"/>
+      <rect class="box server-step" x="910" y="250" width="220" height="75" rx="15"/>
+      <text class="label" x="1020" y="276">Unpack network payload</text>
+      <text class="small" x="1020" y="302">base64 → bytes → same BF16 tensor</text>
+
+      <path class="arrow" d="M1240 215 L1300 250"/>
+      <rect class="box server-step" x="1190" y="250" width="220" height="75" rx="15"/>
+      <text class="label" x="1300" y="276">Gemma tokenizer</text>
+      <text class="small" x="1300" y="302">text → integer IDs (not vectors)</text>
+
+      <path class="arrow" d="M1300 325 L1300 352"/>
+      <rect class="box server-step" x="1190" y="352" width="220" height="70" rx="15"/>
+      <text class="label" x="1300" y="376">Text embedding layer</text>
+      <text class="small" x="1300" y="400">each ID → one width-3840 vector</text>
+
+      <path class="arrow" d="M1020 325 C1020 400 1080 440 1100 450"/>
+      <path class="arrow" d="M1300 422 C1300 440 1230 448 1220 450"/>
+      <rect class="box merge" x="1000" y="450" width="320" height="78" rx="17"/>
+      <text class="label" x="1160" y="472">Build one ordered sequence</text>
+      <text class="small" x="1160" y="495">[T1 T2 BOI V1 … V264 EOI T3]</text>
+      <text class="small" x="1160" y="514">visual rows replace reserved image rows</text>
+
+      <path class="arrow" d="M1160 528 L1160 555"/>
+      <rect class="box server-step" x="1000" y="550" width="320" height="62" rx="15"/>
+      <text class="label" x="1160" y="573">Gemma 4 transformer + KV cache</text>
+      <text class="small" x="1160" y="596">joint text-and-image context</text>
+
+      <path class="arrow" d="M1160 612 L1160 632"/>
+      <rect class="box server-step" x="1050" y="632" width="220" height="50" rx="13"/>
+      <text class="label" x="1160" y="650">LM head chooses token ID</text>
+      <text class="small" x="1160" y="671">detokenizer: ID → readable text</text>
+
+      <rect class="box no-vision" x="895" y="645" width="140" height="34" rx="12"/>
+      <text class="small" x="965" y="663">No image decoding</text>
+
+      <path class="arrow" d="M1270 657 L1325 657"/>
+      <text class="small" x="1350" y="640">repeat for each token</text>
+
+      <!-- Return stream -->
+      <path class="return-arrow" d="M1325 657 C1410 657 1420 730 760 735 C410 738 300 720 300 685"/>
+      <text class="label" x="1160" y="725">SSE generated-token stream back to browser</text>
+    </svg>
+  </div>
+  <section class="transport">
+    <h2>Network packaging: the visual values do not change</h2>
+    <p>This step is like putting a document in an envelope and taking it back out. It is not neural-network decoding and does not interpret the image.</p>
+    <div class="transport-flow">
+      <div class="transport-item"><b>Mac memory</b><code>BF16 tensor [264, 3840]</code><br>2,027,520 raw value bytes. These are the actual visual vectors.</div>
+      <div class="transport-arrow">→</div>
+      <div class="transport-item"><b>Inside JSON</b><code>torch.save</code> creates binary bytes; base64 represents those bytes as a transport-safe ASCII string.</div>
+      <div class="transport-arrow">→</div>
+      <div class="transport-item"><b>H200 memory</b>base64 returns the bytes; <code>torch.load</code> reconstructs the same <code>BF16 [264, 3840]</code> values.</div>
+    </div>
+  </section>
+  <section class="handoff">
+    <h2>What happens after both embeddings are ready</h2>
+    <p>The branches do not remain separate, and their vectors are not added together. vLLM constructs one ordered sequence and generates the answer from it.</p>
+    <div class="handoff-flow">
+      <div class="handoff-step"><b>1. Text vectors</b><span class="text-vector">T1, T2, T3…</span><br>Each row has 3,840 numbers.</div>
+      <div class="handoff-step"><b>2. Visual vectors</b><span class="visual-vector">V1 through V264</span><br>Each row also has 3,840 numbers.</div>
+      <div class="handoff-step"><b>3. One sequence</b><code>T1 T2 BOI V1…V264 EOI T3</code></div>
+      <div class="handoff-step"><b>4. Transformer</b>Attention processes text and visual rows together.</div>
+      <div class="handoff-step"><b>5. Next token</b>The LM head chooses the next answer token ID.</div>
+      <div class="handoff-step"><b>6. Readable text</b>The detokenizer converts the ID to text, streams it, and repeats.</div>
+    </div>
+  </section>
+  <section class="primer">
+    <h2>First principles: what are these objects?</h2>
+    <p>The model only operates on numbers. Words and pixels must both be translated into the kind of numerical rows that the Gemma transformer was trained to understand.</p>
+
+    <div class="concepts">
+      <div class="concept"><b>Scalar</b>One number<br><code>0.42</code></div>
+      <div class="concept"><b>Vector</b>One row of numbers<br><code>[0.2, -1.1, ...]</code></div>
+      <div class="concept"><b>Matrix</b>Many equal-width rows<br><code>[264, 3840]</code></div>
+      <div class="concept"><b>Tensor</b>The general software name for an array of numbers. A vector and a matrix are both tensors.</div>
+    </div>
+
+    <div class="flow-grid">
+      <div class="flow-card text">
+        <h3>Text becomes text vectors on H200</h3>
+        <div class="sequence">"Describe this"
+        ↓ tokenizer
+[17291, 736]             integer IDs
+        ↓ embedding table
+<span class="text-vector">[T1, T2]</span>                 2 vectors
+each T = 3,840 numbers</div>
+        <p>The token IDs are only dictionary indexes. Gemma's learned embedding table turns each ID into one width-3,840 vector.</p>
+      </div>
+      <div class="flow-arrow">+</div>
+      <div class="flow-card image">
+        <h3>Image becomes visual vectors on Mac</h3>
+        <div class="sequence">raw pixels
+        ↓ patches + vision encoder
+<span class="visual-vector">[V1, V2, ... V264]</span>       264 vectors
+each V = 3,840 numbers</div>
+        <p>The vision encoder does not output words. It outputs 264 learned numerical descriptions of the image.</p>
+      </div>
+    </div>
+
+    <div class="latent">
+      <h3>What “same latent space” means</h3>
+      <p>The text embedding layer and the trained vision encoder both output rows with 3,840 coordinates that Gemma has learned to interpret. Individual coordinates do not have simple labels such as “redness.” Meaning is distributed across patterns of many numbers.</p>
+      <p><strong>Same width alone is not enough.</strong> Random 3,840-number rows would be meaningless. Gemma's vision encoder was specifically trained to translate visual information into a representation compatible with the language transformer.</p>
+    </div>
+
+    <div class="equation">
+      <strong>“Combine” means place rows next to each other in sequence order</strong>
+      <div class="sequence"><span class="text-vector">TEXT ROWS</span>       <span class="visual-vector">VISUAL ROWS FROM MAC</span>             <span class="text-vector">MORE TEXT ROWS</span>
+[T1] [T2] [BOI]  [V1] [V2] [V3] ... [V264]  [EOI] [T3]
+
+Every bracket above contains exactly 3,840 numbers.</div>
+      <div class="not-this">
+        <div class="no">✕ No text + image addition</div>
+        <div class="no">✕ No averaging</div>
+        <div class="no">✕ No image-to-text conversion</div>
+      </div>
+    </div>
+
+    <h3>Why there are image placeholders</h3>
+    <p>The prompt initially contains one <code>&lt;image&gt;</code> marker. vLLM expands it into 264 reserved positions because the Mac produced 264 visual vectors. Those reserved rows tell Gemma where the image belongs relative to the words.</p>
+    <table class="position-table">
+      <thead><tr><th>Sequence position</th><th>Before replacement</th><th>After replacement</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td><span class="text-vector">T1</span></td><td><span class="text-vector">T1</span></td><td>Text token such as “Describe”</td></tr>
+        <tr><td>1</td><td><span class="text-vector">T2</span></td><td><span class="text-vector">T2</span></td><td>Next text token</td></tr>
+        <tr><td>2</td><td>BOI</td><td>BOI</td><td>Beginning-of-image control token</td></tr>
+        <tr><td>3</td><td><span class="slot">reserved image row</span></td><td><span class="visual-vector">V1</span></td><td>First visual vector from Mac</td></tr>
+        <tr><td>4</td><td><span class="slot">reserved image row</span></td><td><span class="visual-vector">V2</span></td><td>Second visual vector from Mac</td></tr>
+        <tr><td>…</td><td><span class="slot">…</span></td><td><span class="visual-vector">…</span></td><td>One-for-one replacement</td></tr>
+        <tr><td>266</td><td><span class="slot">reserved image row</span></td><td><span class="visual-vector">V264</span></td><td>Last visual vector from Mac</td></tr>
+        <tr><td>267</td><td>EOI</td><td>EOI</td><td>End-of-image control token</td></tr>
+      </tbody>
+    </table>
+    <div class="result"><strong>What happens after the transformer:</strong> the LM head scores possible next-token IDs, vLLM chooses one, and the tokenizer decodes that ID into readable text. The new token is added to the sequence and this repeats until the answer is complete. The image vectors are never decoded back into pixels or separately converted into words.</div>
+  </section>
+  <section class="walkthrough">
+    <h2>The replacement step, literally</h2>
+    <p>This is not a tensor-to-vector conversion. A vector is one row of numbers; a tensor is the container holding many rows. Both branches must produce rows of exactly 3,840 numbers.</p>
+    <div class="steps">
+      <div class="step">
+        <strong>1. Tokenizer reserves 264 positions</strong>
+        The prompt contains one image marker. vLLM expands it into 264 repeated image token IDs between beginning/end image control tokens.
+        <div class="sequence"><span class="text-vector">Describe</span> <span class="text-vector">this</span> [BOI]
+<span class="slot">[IMAGE_ID] × 264</span> [EOI] <span class="text-vector">please</span></div>
+      </div>
+      <div class="step">
+        <strong>2. Both sides provide width-3,840 rows</strong>
+        Text IDs go through the H200 embedding table. The Mac has already produced the visual rows. These are the same width, but encode different information.
+        <div class="sequence"><span class="text-vector">text rows:   [T1] [T2] ...</span>
+<span class="slot">image slots: [ _] [ _] × 264</span>
+<span class="visual-vector">Mac sends:   [V1] [V2] ... [V264]</span>
+
+Tn and Vn each = 3,840 numbers</div>
+      </div>
+      <div class="step">
+        <strong>3. Replace, do not combine</strong>
+        The code selects every row whose token ID is <code>image_token_id</code> and overwrites those rows in order with V1 through V264.
+        <div class="sequence">BEFORE: <span class="text-vector">[T1] [T2]</span> <span class="slot">[ _] [ _] ...</span>
+RECEIVE: <span class="visual-vector">          [V1] [V2] ...</span>
+AFTER:  <span class="text-vector">[T1] [T2]</span> <span class="visual-vector">[V1] [V2] ...</span></div>
+      </div>
+    </div>
+    <div class="result"><strong>Result:</strong> one ordered sequence of text and visual vectors. That whole sequence is the input tensor passed into the Gemma language transformer.</div>
+  </section>
+  <p style="margin-top:14px">The large green dashed box is the complete vLLM deployment boundary. The exact baseline implementation is <code>inputs_embeds.masked_scatter(image_mask, image_features)</code>.</p>
+</main>
+</html>

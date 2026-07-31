@@ -2,9 +2,7 @@ import argparse
 import base64
 import io
 import json
-import os
 import time
-from contextlib import nullcontext
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
@@ -36,17 +34,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Serve the language side of split Gemma"
     )
-    parser.add_argument("--artifact", type=Path, required=True)
+    parser.add_argument("--server-artifact", type=Path, required=True)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()
 
     model = (
-        AutoModelForMultimodalLM.from_pretrained(args.artifact, dtype=torch.bfloat16)
+        AutoModelForMultimodalLM.from_pretrained(
+            args.server_artifact, dtype=torch.bfloat16
+        )
         .to("cuda")
         .eval()
     )
-    tokenizer = AutoTokenizer.from_pretrained(args.artifact)
+    tokenizer = AutoTokenizer.from_pretrained(args.server_artifact)
     if model.model.embed_vision is not None:
         raise RuntimeError("Server artifact contains an image embedder")
 
@@ -135,38 +135,17 @@ def main() -> None:
                 streamer = TimedStreamer()
                 torch.cuda.synchronize()
                 started = time.perf_counter()
-                profile_path = os.environ.pop("GEMMA_PROFILE", None)
-                profiler = (
-                    torch.profiler.profile(
-                        activities=[
-                            torch.profiler.ProfilerActivity.CPU,
-                            torch.profiler.ProfilerActivity.CUDA,
-                        ],
-                        record_shapes=True,
-                        profile_memory=True,
-                    )
-                    if profile_path
-                    else nullcontext()
-                )
-                with profiler as profile:
-                    with torch.inference_mode():
-                        output = model.generate(
-                            input_ids=input_ids,
-                            inputs_embeds=inputs_embeds,
-                            attention_mask=attention_mask,
-                            mm_token_type_ids=token_types,
-                            do_sample=False,
-                            max_new_tokens=max(
-                                1, min(int(request.get("max_tokens", 128)), 1024)
-                            ),
-                            streamer=streamer,
-                        )
-                if profile_path:
-                    profile.export_chrome_trace(profile_path)
-                    Path(profile_path).with_suffix(".txt").write_text(
-                        profile.key_averages().table(
-                            sort_by="self_cuda_time_total", row_limit=50
-                        )
+                with torch.inference_mode():
+                    output = model.generate(
+                        input_ids=input_ids,
+                        inputs_embeds=inputs_embeds,
+                        attention_mask=attention_mask,
+                        mm_token_type_ids=token_types,
+                        do_sample=False,
+                        max_new_tokens=max(
+                            1, min(int(request.get("max_tokens", 128)), 1024)
+                        ),
+                        streamer=streamer,
                     )
                 torch.cuda.synchronize()
                 gpu_e2e_ms = (time.perf_counter() - started) * 1000
