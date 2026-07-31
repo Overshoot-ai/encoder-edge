@@ -152,4 +152,4 @@ Open [http://127.0.0.1:3001](http://127.0.0.1:3001).
 
 ## High-Level Overview of the Optimized Architecture
 
-[Open the high-level optimized architecture diagram.](architecture.html)
+![High-level overview of the optimized architecture](docs/architecture.png)
