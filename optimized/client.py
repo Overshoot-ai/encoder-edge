@@ -10,6 +10,10 @@ import torch
 from PIL import Image
 from safetensors.torch import load_file
 from transformers import AutoConfig, AutoImageProcessor
+from transformers.models.gemma4.modeling_gemma4 import (
+    Gemma4MultimodalEmbedder,
+    Gemma4VisionModel,
+)
 from transformers.models.gemma4_unified.modeling_gemma4_unified import (
     Gemma4UnifiedVisionEmbedder,
 )
@@ -25,14 +29,38 @@ class StreamingImageClient:
         dtype = torch.bfloat16 if self.device.type == "mps" else torch.float32
         config = AutoConfig.from_pretrained(artifact)
         self.image_processor = AutoImageProcessor.from_pretrained(artifact)
-        self.embedder = Gemma4UnifiedVisionEmbedder(
-            config.vision_config, config.text_config
-        )
-        self.embedder.load_state_dict(load_file(artifact / "vision.safetensors"))
-        self.embedder.to(device=self.device, dtype=dtype).eval()
+        vision_state = load_file(artifact / "vision.safetensors")
+        self.is_gemma4 = config.model_type == "gemma4"
+        if self.is_gemma4:
+            self.vision_tower = Gemma4VisionModel(config.vision_config)
+            self.vision_tower.load_state_dict(
+                {
+                    name.removeprefix("vision_tower."): tensor
+                    for name, tensor in vision_state.items()
+                    if name.startswith("vision_tower.")
+                }
+            )
+            self.embedder = Gemma4MultimodalEmbedder(
+                config.vision_config,
+                config.text_config,
+            )
+            self.embedder.load_state_dict(
+                {
+                    name.removeprefix("embed_vision."): tensor
+                    for name, tensor in vision_state.items()
+                    if name.startswith("embed_vision.")
+                }
+            )
+            self.vision_tower.to(device=self.device, dtype=dtype).eval()
+            self.embedder.to(device=self.device, dtype=dtype).eval()
+        else:
+            self.embedder = Gemma4UnifiedVisionEmbedder(
+                config.vision_config, config.text_config
+            )
+            self.embedder.load_state_dict(vision_state)
+            self.embedder.to(device=self.device, dtype=dtype).eval()
 
-    def stream(self, image: Image.Image, question: str):
-        total_started = time.perf_counter()
+    def encode_image(self, image: Image.Image) -> tuple[torch.Tensor, float, float]:
         started = time.perf_counter()
         inputs = self.image_processor(
             images=image.convert("RGB"),
@@ -44,11 +72,29 @@ class StreamingImageClient:
             torch.mps.synchronize()
         started = time.perf_counter()
         with torch.inference_mode():
-            features = self.embedder(inputs["pixel_values"].to(self.device), positions)
+            if self.is_gemma4:
+                hidden_states = self.vision_tower(
+                    pixel_values=inputs["pixel_values"].to(
+                        device=self.device,
+                        dtype=self.embedder.embedding_projection.weight.dtype,
+                    ),
+                    pixel_position_ids=positions,
+                ).last_hidden_state
+                features = self.embedder(inputs_embeds=hidden_states)
+            else:
+                features = self.embedder(
+                    inputs["pixel_values"].to(self.device), positions
+                )
         if self.device.type == "mps":
             torch.mps.synchronize()
         encode_ms = (time.perf_counter() - started) * 1000
-        features = features[~positions.eq(-1).all(dim=-1)]
+        if not self.is_gemma4:
+            features = features[~positions.eq(-1).all(dim=-1)]
+        return features, preprocess_ms, encode_ms
+
+    def stream(self, image: Image.Image, question: str):
+        total_started = time.perf_counter()
+        features, preprocess_ms, encode_ms = self.encode_image(image)
 
         started = time.perf_counter()
         buffer = io.BytesIO()
