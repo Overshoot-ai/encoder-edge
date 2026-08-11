@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="End-to-end design for packaging, serving, and operating a browser-local Gemma vision encoder connected to an H200 language model.">
+<title>Browser-Local Vision, Cloud Language</title>
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #f3efe5;
+    --ink: #191916;
+    --muted: #68675f;
+    --line: #cec8b9;
+    --accent: #d94c2b;
+    --accent-soft: #f1d2c5;
+    --code: #20201c;
+    --code-ink: #f5f0e5;
+    --selection: #f0b59f;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    background:
+      linear-gradient(90deg, transparent 0, transparent calc(50% - 440px), rgba(25, 25, 22, 0.05) calc(50% - 440px), rgba(25, 25, 22, 0.05) calc(50% - 439px), transparent calc(50% - 439px)),
+      var(--paper);
+    color: var(--ink);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 19px;
+    line-height: 1.68;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--selection);
+  }
+
+  main {
+    width: min(100% - 40px, 820px);
+    margin: 0 auto;
+    padding: 52px 0 96px;
+  }
+
+  .hero {
+    margin-bottom: 72px;
+    padding-top: 34px;
+    border-top: 8px solid var(--ink);
+  }
+
+  .eyebrow {
+    margin: 0 0 26px;
+    color: var(--accent);
+    font: 700 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: Arial, Helvetica, sans-serif;
+    letter-spacing: -0.035em;
+  }
+
+  h1 {
+    max-width: 760px;
+    margin: 0;
+    font-size: clamp(52px, 9vw, 92px);
+    font-weight: 800;
+    line-height: 0.94;
+  }
+
+  .hero h2 {
+    max-width: 680px;
+    margin: 30px 0 20px;
+    padding: 0;
+    border: 0;
+    color: var(--muted);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(22px, 3vw, 30px);
+    font-weight: 400;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+  }
+
+  .dateline {
+    margin: 0;
+    color: var(--muted);
+    font: 600 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  h2 {
+    margin: 78px 0 24px;
+    padding-top: 18px;
+    border-top: 2px solid var(--ink);
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.08;
+  }
+
+  h3 {
+    margin: 52px 0 14px;
+    font-size: 26px;
+    line-height: 1.15;
+  }
+
+  p,
+  ul,
+  ol,
+  blockquote,
+  table,
+  pre {
+    margin-top: 0;
+    margin-bottom: 28px;
+  }
+
+  ul,
+  ol {
+    padding-left: 28px;
+  }
+
+  li {
+    margin: 7px 0;
+    padding-left: 4px;
+  }
+
+  blockquote {
+    margin-left: 0;
+    padding: 18px 0 18px 28px;
+    border-left: 6px solid var(--accent);
+    color: #3e3d37;
+    font-size: 1.18em;
+    font-style: italic;
+  }
+
+  blockquote p {
+    margin: 0;
+  }
+
+  a {
+    color: var(--ink);
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+
+  a:hover {
+    color: var(--accent);
+  }
+
+  code,
+  pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  }
+
+  :not(pre) > code {
+    padding: 0.12em 0.3em;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.36);
+    font-size: 0.82em;
+  }
+
+  pre {
+    overflow-x: auto;
+    padding: 24px 26px;
+    border: 1px solid #0f0f0d;
+    border-radius: 4px;
+    background: var(--code);
+    color: var(--code-ink);
+    font-size: 14px;
+    line-height: 1.58;
+    box-shadow: 8px 8px 0 var(--accent-soft);
+  }
+
+  pre code {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  th,
+  td {
+    min-width: 150px;
+    padding: 13px 15px;
+    border: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  article > p:first-of-type {
+    font-size: 1.08em;
+  }
+
+  @media (max-width: 640px) {
+    body {
+      background: var(--paper);
+      font-size: 17px;
+    }
+
+    main {
+      width: min(100% - 28px, 820px);
+      padding-top: 22px;
+    }
+
+    .hero {
+      margin-bottom: 52px;
+      padding-top: 24px;
+    }
+
+    h2 {
+      margin-top: 62px;
+    }
+
+    pre {
+      margin-right: 5px;
+      padding: 18px;
+      font-size: 12px;
+      box-shadow: 5px 5px 0 var(--accent-soft);
+    }
+  }
+
+  @media print {
+    body {
+      background: white;
+      color: black;
+    }
+
+    main {
+      width: 100%;
+      padding: 0;
+    }
+
+    a {
+      color: black;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      box-shadow: none;
+    }
+  }
+
+
+  article > h1:first-child {
+    margin: 34px 0 0;
+    padding-top: 34px;
+    border-top: 8px solid var(--ink);
+  }
+
+  article > h1:first-child + h2 {
+    max-width: 680px;
+    margin: 30px 0 20px;
+    padding: 0;
+    border: 0;
+    color: var(--muted);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(22px, 3vw, 30px);
+    font-weight: 400;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+  }
+
+  article > h1:first-child + h2 + p,
+  article > h1:first-child + h2 + p + p {
+    color: var(--muted);
+    font: 600 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 640px) {
+    article > h1:first-child {
+      margin-top: 0;
+      padding-top: 24px;
+    }
+  }
+</style>
+</head>
+<body>
+<main>
+<article>
+<h1>Browser-Local Vision, Cloud Language</h1>
+<h2>End-to-end system design for packaging, serving, and operating the split model</h2>
+<p>Status: proposed production architecture</p>
+<p>Research and measurements checked: 2026-08-10</p>
+<h2>1. Purpose</h2>
+<p>The system processes an image with the Gemma vision encoder in the user&#39;s browser, then sends visual features to an H200 that runs the projector and language model.</p>
+<pre><code class="language-text">USER DEVICE                                  OVERSHOOT
+
+image                                        visual features
+  -&gt; image processor                           -&gt; RMSNorm
+  -&gt; vision encoder                            -&gt; 768-to-2560 projector
+  -&gt; [264, 768] features -------------------&gt;  -&gt; language model
+                                                   -&gt; streamed answer
+</code></pre>
+<p>The design has three goals:</p>
+<ol>
+<li>Raw images do not enter the normal server inference path.</li>
+<li>The browser downloads only the vision encoder, not the complete language model.</li>
+<li>The encoder, browser runtime, and server model can update independently under an explicit compatibility contract.</li>
+</ol>
+<p>The design does not claim that visual features are anonymous or semantically private. The server receives enough visual information to answer the question.</p>
+<h2>2. System at a glance</h2>
+<p>The deployment consists of three logical packages:</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Runs where</th>
+<th>Contains</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Client runtime</td>
+<td>Browser</td>
+<td>Application code, image processor, ONNX Runtime Web, Worker, WebGPU qualification, downloader, cache manager, wire encoder, API client</td>
+</tr>
+<tr>
+<td>Vision encoder</td>
+<td>Browser, downloaded separately</td>
+<td>ONNX graph, weight data, processor configuration, manifest, checksums, golden test metadata</td>
+</tr>
+<tr>
+<td>Server model</td>
+<td>H200 infrastructure</td>
+<td>RMSNorm/projector block, Gemma language model, vLLM, binary gateway, compatibility table</td>
+</tr>
+</tbody></table>
+<p>Three packages does not mean three files. One logical encoder release may contain a manifest, graph, processor file, and several weight files.</p>
+<p>The proposed hosting layout is:</p>
+<pre><code class="language-text">Web application host/CDN
+  -&gt; client runtime
+
+Model object storage/CDN
+  -&gt; immutable encoder releases
+
+Public authenticated API
+  -&gt; private feature gateway
+  -&gt; H200 projector and language model
+</code></pre>
+<h2>3. Core terminology</h2>
+<h3>Model weights</h3>
+<p>Weights are the numerical parameters learned during training. A weight tensor might be:</p>
+<pre><code class="language-text">vision.layer.0.attention.q.weight
+shape: [768, 768]
+dtype: BF16
+</code></pre>
+<p>Weights alone do not specify the order of model operations. A native runtime such as PyTorch, vLLM, or MLX supplies model implementation code separately.</p>
+<h3>ONNX</h3>
+<p>ONNX is a portable model representation. An <code>.onnx</code> file describes:</p>
+<ul>
+<li>Inputs and outputs.</li>
+<li>Operators and their order.</li>
+<li>Tensor shapes and data types.</li>
+<li>Constants.</li>
+<li>Learned weights, called initializers, or references to external weight data.</li>
+</ul>
+<p>ONNX replaces the Python model class with a machine-readable computation graph.</p>
+<h3>ONNX Runtime Web</h3>
+<p>ONNX Runtime Web is browser-compatible software that opens and executes an ONNX graph. It validates the graph, allocates tensors, maps operators to implementations, submits GPU work, and returns outputs.</p>
+<pre><code class="language-text">ONNX graph       = what operations to perform
+ONNX Runtime Web = software that performs them
+WebGPU           = browser interface used to reach the GPU
+GPU              = hardware executing the shaders
+</code></pre>
+<p>ONNX is not required merely because the client has a GPU. It is required by our selected browser runtime. A custom WebGPU engine, MLC/WebLLM, or llama.cpp/GGUF would use a different model representation.</p>
+<h3>Web Worker</h3>
+<p>A Web Worker is a background browser execution context. It isolates preprocessing and model execution from the main UI thread.</p>
+<pre><code class="language-text">MAIN THREAD                         VISION WORKER
+
+render UI                           load model
+capture user action                 preprocess frame
+show progress       postMessage     run ONNX session
+stream answer      &lt;-------------&gt;  return features
+</code></pre>
+<p>The Worker is part of the client runtime package. It does not make inference faster; it keeps the interface responsive.</p>
+<h3>WebGPU qualification</h3>
+<p>The browser must pass more than a <code>navigator.gpu</code> check:</p>
+<ol>
+<li>WebGPU is exposed.</li>
+<li>A hardware adapter is available.</li>
+<li>Required features such as <code>shader-f16</code> are available.</li>
+<li>Adapter limits are sufficient.</li>
+<li>ONNX Runtime Web supports the browser.</li>
+<li>The exact model session initializes.</li>
+<li>Important nodes remain on WebGPU rather than falling back to WASM.</li>
+<li>A golden input produces an acceptable result within the device threshold.</li>
+</ol>
+<h3>ImageBitmap</h3>
+<p>An <code>ImageBitmap</code> is a browser-managed decoded image that can be transferred to a Worker without first creating a base64 string or JPEG.</p>
+<pre><code class="language-javascript">const bitmap = await createImageBitmap(imageOrVideoElement);
+worker.postMessage({ type: &quot;encode&quot;, bitmap }, [bitmap]);
+</code></pre>
+<p>The Worker draws it to an <code>OffscreenCanvas</code>, performs exact preprocessing, and releases it with <code>bitmap.close()</code>.</p>
+<pre><code class="language-text">decoded image -&gt; ImageBitmap -&gt; Worker -&gt; processor -&gt; model tensor
+</code></pre>
+<p>An ImageBitmap is transport for decoded pixels. It is not itself the encoder input.</p>
+<h2>4. Package one: client runtime</h2>
+<p>The runtime is served with the web application and includes:</p>
+<pre><code class="language-text">client-runtime/
+|-- application UI
+|-- source capture
+|-- capability probe
+|-- model downloader
+|-- browser storage manager
+|-- vision Worker
+|   |-- ONNX Runtime Web
+|   |-- image processor
+|   `-- feature encoder
+|-- BF16 wire serializer
+`-- streaming API client
+</code></pre>
+<p>The runtime should be small relative to the model and update through the normal web deployment process.</p>
+<p>The runtime owns behavior, not weights. It knows how to:</p>
+<ul>
+<li>Discover compatible encoder releases.</li>
+<li>Download and verify one release.</li>
+<li>Load it into ONNX Runtime Web.</li>
+<li>Convert an input image into the exact model tensor.</li>
+<li>Serialize the output into the feature protocol.</li>
+<li>Recover from cache eviction, device loss, cancellation, and incompatible revisions.</li>
+</ul>
+<h2>5. Package two: vision encoder</h2>
+<p>The encoder is a separately downloaded, versioned artifact:</p>
+<pre><code class="language-text">gemma-4-e4b-vision/&lt;revision&gt;/
+|-- manifest.json
+|-- graph.onnx
+|-- weights-00.data
+|-- weights-01.data
+|-- processor.json
+`-- golden-test.json
+</code></pre>
+<p>The current measured export is one 308,190,557-byte FP16 <code>.onnx</code> file. It contains the fixed-shape vision tower and stops before the server projector.</p>
+<p>External <code>.data</code> files are a proposed delivery representation. In an external-data ONNX graph, a weight initializer identifies its byte source:</p>
+<pre><code class="language-text">name: vision.layers.0.attention.q.weight
+location: weights-00.data
+offset: 8388608
+length: 1179648
+</code></pre>
+<p>External files do not create multiple models. They are storage pieces for one graph and one encoder session.</p>
+<h3>Quantization status</h3>
+<p>The tower has roughly 150 million parameters:</p>
+<pre><code class="language-text">150M weights * 16 bits ~= 300 MB at FP16/BF16
+150M weights *  4 bits ~=  75 MB at ideal packed INT4
+</code></pre>
+<p>Real weight-only INT4 will exceed 75 MB because quantization blocks require scales and possibly zero points, some tensors remain FP16, and graph/constants add bytes.</p>
+<p><code>85-100 MB raw</code> is an experiment-planning hypothesis, not a measured download. No user-facing size should be published until the actual quantized artifact exists and the generated manifest records its exact bytes.</p>
+<p>The INT4 candidate must pass:</p>
+<ul>
+<li>Converted-node and converted-byte coverage.</li>
+<li>Browser session initialization.</li>
+<li>WebGPU provider assignment.</li>
+<li>Feature diagnostics.</li>
+<li>Composed H200 answer/logit tests.</li>
+<li>ChartQA and product workload gates.</li>
+<li>Browser memory and latency gates.</li>
+</ul>
+<h2>6. The encoder manifest</h2>
+<p>The manifest is an application-level contract. It is not part of the ONNX standard and has not been implemented yet.</p>
+<p>The ONNX graph knows which weight bytes it needs. It does not know which processor, API protocol, or server projector is compatible. The manifest binds those deployment pieces:</p>
+<pre><code class="language-json">{
+  &quot;schema_version&quot;: 1,
+  &quot;model_id&quot;: &quot;gemma-4-e4b-vision&quot;,
+  &quot;model_revision&quot;: &quot;sha256:encoder-package-hash&quot;,
+  &quot;processor_revision&quot;: &quot;sha256:processor-hash&quot;,
+  &quot;split_point&quot;: &quot;vision.pre_projector&quot;,
+  &quot;protocol_version&quot;: 3,
+  &quot;runtime&quot;: {
+    &quot;name&quot;: &quot;onnxruntime-web&quot;,
+    &quot;minimum_version&quot;: &quot;1.x&quot;
+  },
+  &quot;required_features&quot;: [&quot;webgpu&quot;, &quot;shader-f16&quot;],
+  &quot;input&quot;: {
+    &quot;shape&quot;: [1, 2376, 768],
+    &quot;dtype&quot;: &quot;float16&quot;
+  },
+  &quot;output&quot;: {
+    &quot;shape&quot;: [1, 264, 768],
+    &quot;wire_dtype&quot;: &quot;bfloat16&quot;
+  },
+  &quot;server_compatibility&quot;: [&quot;gemma-4-e4b-server-r7&quot;],
+  &quot;files&quot;: [
+    {
+      &quot;path&quot;: &quot;graph.onnx&quot;,
+      &quot;bytes&quot;: 1245184,
+      &quot;sha256&quot;: &quot;...&quot;
+    },
+    {
+      &quot;path&quot;: &quot;weights-00.data&quot;,
+      &quot;bytes&quot;: 16777216,
+      &quot;sha256&quot;: &quot;...&quot;
+    }
+  ]
+}
+</code></pre>
+<p>The manifest supports four checks:</p>
+<ol>
+<li><strong>Download integrity:</strong> every file has an expected byte count and SHA-256.</li>
+<li><strong>Runtime compatibility:</strong> the browser has the required runtime and GPU features.</li>
+<li><strong>Neural compatibility:</strong> graph, processor, shape, dtype, and split point match.</li>
+<li><strong>Server compatibility:</strong> the H200 still serves the matching projector/model revision.</li>
+</ol>
+<h2>7. Package three: server model</h2>
+<p>The server package remains private and contains:</p>
+<pre><code class="language-text">server-model/
+|-- public API integration
+|-- binary feature gateway
+|-- revision compatibility table
+|-- RMSNorm/projector block
+|-- Gemma language model
+`-- vLLM/H200 runtime
+</code></pre>
+<p>The server receives <code>[264,768]</code> BF16 features. It applies:</p>
+<pre><code class="language-text">[264, 768]
+  -&gt; RMSNorm
+  -&gt; linear projection 768 -&gt; 2560
+  -&gt; [264, 2560] language-model visual embeddings
+  -&gt; language model
+</code></pre>
+<p>The projector stays on the server because post-projector transmission is larger:</p>
+<pre><code class="language-text">pre-projector:  264 * 768  * 2 =   405,504 bytes
+post-projector: 264 * 2560 * 2 = 1,351,680 bytes
+</code></pre>
+<p>The server must retain compatibility with active encoder revisions until those client revisions are retired.</p>
+<h2>8. Build and publishing process</h2>
+<p>This happens before any user opens the application.</p>
+<pre><code class="language-text">1. Load the source Gemma checkpoint.
+2. Select the split before the projector block.
+3. Export the fixed-shape tower to ONNX.
+4. Validate the ONNX graph and reference output.
+5. Optionally quantize eligible weights.
+6. Count converted and unconverted bytes.
+7. Run composed quality tests through the H200.
+8. Produce graph, external data, processor config, and golden test.
+9. Calculate file sizes and SHA-256 hashes.
+10. Generate manifest.json.
+11. Upload files to immutable content-addressed CDN URLs.
+12. Add the encoder/server compatibility pair to the public catalog.
+</code></pre>
+<p>No artifact becomes discoverable until the complete package passes its gates.</p>
+<h2>9. First-use browser process</h2>
+<h3>Step 1: load the runtime</h3>
+<p>The user opens the HTTPS web application. The normal HTML, JavaScript, CSS, Worker code, and ONNX Runtime Web load.</p>
+<h3>Step 2: select local vision mode</h3>
+<p>The UI explains the boundary:</p>
+<pre><code class="language-text">Raw images are processed on this device.
+Visual features and your question are sent to Overshoot.
+</code></pre>
+<h3>Step 3: qualify the browser</h3>
+<p>The runtime checks browser/runtime support, WebGPU adapter features, storage, and the small qualification probe.</p>
+<h3>Step 4: request download consent</h3>
+<p>The application shows the exact generated package size from the manifest:</p>
+<pre><code class="language-text">Download local vision encoder
+Size: &lt;manifest total bytes&gt;
+Storage: this browser
+
+[Download] [Cancel]
+</code></pre>
+<h3>Step 5: download and verify</h3>
+<p>Files use immutable content-hashed URLs. Each file is committed only after byte-count and SHA-256 verification.</p>
+<pre><code class="language-text">download -&gt; verify -&gt; cache -&gt; mark file ready
+</code></pre>
+<h3>Step 6: create the model session</h3>
+<p>The Worker initializes ONNX Runtime Web with WebGPU only during qualification. Material WASM fallback is not accepted silently.</p>
+<h3>Step 7: run the golden test</h3>
+<p>The Worker runs a known input and compares output diagnostics against the package&#39;s accepted bounds. Only then does the encoder become active.</p>
+<h2>10. Per-request browser process</h2>
+<p>For each image/question pair:</p>
+<pre><code class="language-text">1. Acquire the current image or frame.
+2. Create an ImageBitmap.
+3. Transfer the ImageBitmap to the Worker.
+4. Perform exact resize, crop/pad, normalization, patch, and position processing.
+5. Create the `[1,2376,768]` FP16 model input.
+6. Run the ONNX session through WebGPU.
+7. Receive `[1,264,768]` pre-projector features.
+8. Convert to the qualified BF16 wire representation.
+9. Build the binary request.
+10. Send it to the public authenticated API.
+11. Read the streamed answer.
+</code></pre>
+<p>Preprocessing is part of model correctness. Browser canvas output cannot be assumed equivalent to the reference Python/PIL processor; it must pass golden preprocessing and composed answer tests.</p>
+<h2>11. Feature wire protocol</h2>
+<p>The current experimental protocol has this envelope:</p>
+<pre><code class="language-text">4 bytes   magic: CDG2
+4 bytes   metadata length
+8 bytes   tensor length
+N bytes   UTF-8 JSON metadata
+M bytes   contiguous BF16 tensor data
+</code></pre>
+<p>The production revision should bind:</p>
+<ul>
+<li>Model and weight revision.</li>
+<li>Processor revision.</li>
+<li>Split point.</li>
+<li>Protocol revision.</li>
+<li>Tensor shape, dtype, byte order, and layout.</li>
+<li>User question and generation limits.</li>
+<li>Request ID and expiry/replay metadata.</li>
+</ul>
+<p>The tensor remains binary. It is not base64 or a JSON float array.</p>
+<p>The browser request is conceptually:</p>
+<pre><code class="language-http">POST /v1/chat/completions
+Authorization: Bearer &lt;user credential&gt;
+Content-Type: application/x-cross-device-gemma
+Accept: text/event-stream
+
+&lt;binary feature envelope&gt;
+</code></pre>
+<h2>12. Public API and H200 process</h2>
+<p>The public API is the trust boundary. The browser never contacts a private H200 address directly.</p>
+<pre><code class="language-text">BROWSER
+  -&gt; public HTTPS API
+       -&gt; authenticate and authorize
+       -&gt; enforce compressed/uncompressed limits
+       -&gt; validate protocol and revision
+       -&gt; forward through private service identity
+            -&gt; feature gateway
+                 -&gt; validate shape/dtype/finiteness
+                 -&gt; create vLLM image embeddings input
+                      -&gt; H200 projector and language model
+                           -&gt; SSE answer
+</code></pre>
+<p>Validation occurs before large allocation or H200 work:</p>
+<ul>
+<li>Exact content type.</li>
+<li>Bounded request length.</li>
+<li>Known protocol revision.</li>
+<li>Allowed model/processor/split revision tuple.</li>
+<li>Exact rank, width, and element count.</li>
+<li>BF16 byte length.</li>
+<li>Finite values.</li>
+<li>Per-user rate and concurrency limits.</li>
+</ul>
+<p>Shape validation protects availability. It does not prove that a valid-looking tensor came from a genuine image.</p>
+<h2>13. Permissions and user consent</h2>
+<p>The browser-local route does not require a special AI or WebGPU permission prompt.</p>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>User permission/action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>WebGPU</td>
+<td>No prompt; automatic capability check</td>
+</tr>
+<tr>
+<td>Model execution</td>
+<td>No prompt</td>
+</tr>
+<tr>
+<td>Model download</td>
+<td>Explicit application confirmation</td>
+</tr>
+<tr>
+<td>Cache API/OPFS storage</td>
+<td>Usually no prompt; persistence request may be granted, denied, or prompted depending on browser</td>
+</tr>
+<tr>
+<td>Webcam</td>
+<td>Browser/OS camera permission</td>
+</tr>
+<tr>
+<td>Screen capture</td>
+<td>Browser source picker every session; OS screen-recording permission may also apply</td>
+</tr>
+<tr>
+<td>Local file</td>
+<td>User explicitly selects each file</td>
+</tr>
+<tr>
+<td>Feature transmission</td>
+<td>Explicit application disclosure/consent</td>
+</tr>
+<tr>
+<td>Public API request</td>
+<td>No browser prompt; normal authenticated HTTPS</td>
+</tr>
+</tbody></table>
+<p>Cloud fallback is a separate consent decision:</p>
+<pre><code class="language-text">Local only
+  -&gt; never upload raw pixels; fail if local execution fails
+
+Ask before cloud fallback
+  -&gt; prompt before changing the data path
+
+Cloud allowed
+  -&gt; raw image upload permitted under the cloud-mode disclosure
+</code></pre>
+<p>Local failure must not silently change the route from features to raw pixels.</p>
+<h2>14. Model storage and updates</h2>
+<p>Browser storage is an evictable cache, not permanent installation.</p>
+<p>The runtime should use Cache API or OPFS and support:</p>
+<ul>
+<li>Exact download progress.</li>
+<li>Bounded retries.</li>
+<li>Partial revision recovery.</li>
+<li>SHA-256 verification.</li>
+<li>Previous-version rollback.</li>
+<li>User-triggered model deletion.</li>
+<li>Full cache-miss recovery.</li>
+</ul>
+<p>Update activation is atomic:</p>
+<pre><code class="language-text">revision A remains active
+  -&gt; download revision B
+  -&gt; verify all B files
+  -&gt; initialize B
+  -&gt; run B golden test
+  -&gt; mark B active
+  -&gt; remove A later
+</code></pre>
+<p>The server cannot retire projector revision A until active clients using encoder A have migrated or expired.</p>
+<h2>15. Reliability behavior</h2>
+<p>&quot;Three packages&quot; is system topology. &quot;Reliable packaging&quot; is how those packages are verified, activated, and recovered. Reliability is not a fourth package.</p>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Required behavior</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Unsupported browser/GPU</td>
+<td>Do not offer local mode</td>
+</tr>
+<tr>
+<td>Download interrupted</td>
+<td>Retry incomplete files; keep prior revision active</td>
+</tr>
+<tr>
+<td>Hash mismatch</td>
+<td>Delete the bad file and retry; never initialize it</td>
+</tr>
+<tr>
+<td>Storage quota exceeded</td>
+<td>Explain the failure and offer cleanup/cloud options</td>
+</tr>
+<tr>
+<td>Cache evicted</td>
+<td>Treat as first download again</td>
+</tr>
+<tr>
+<td>Session creation fails</td>
+<td>Mark device/revision incompatible; do not silently use WASM</td>
+</tr>
+<tr>
+<td>WebGPU device lost</td>
+<td>Recreate session/resources and retry once</td>
+</tr>
+<tr>
+<td>Tab backgrounded or machine sleeps</td>
+<td>Cancel/stale the request; requalify if required</td>
+</tr>
+<tr>
+<td>Local encoder slower than frame source</td>
+<td>Keep one request in flight and process the newest frame only</td>
+</tr>
+<tr>
+<td>API unavailable</td>
+<td>Preserve local-only policy; do not upload pixels elsewhere</td>
+</tr>
+<tr>
+<td>Server rejects revision</td>
+<td>Refresh compatibility catalog; never guess a projector</td>
+</tr>
+</tbody></table>
+<p>For continuous frames, use latest-frame backpressure:</p>
+<pre><code class="language-text">encoder busy
+  -&gt; frame 101 arrives
+  -&gt; frame 102 replaces 101
+  -&gt; encoder becomes ready
+  -&gt; encode frame 102
+</code></pre>
+<p>Queuing every frame produces correct answers about stale images.</p>
+<h2>16. Security and privacy boundary</h2>
+<h3>What remains local</h3>
+<ul>
+<li>Original image bytes.</li>
+<li>Image metadata such as EXIF, unless separately submitted.</li>
+<li>Browser preprocessing intermediates.</li>
+<li>Downloaded encoder weights.</li>
+</ul>
+<h3>What leaves the device</h3>
+<ul>
+<li>The text question.</li>
+<li>Model/version metadata.</li>
+<li><code>[264,768]</code> visual features, roughly 405,504 raw tensor bytes for the current fixed shape.</li>
+<li>Authentication and request metadata.</li>
+</ul>
+<h3>Accurate claim</h3>
+<blockquote>
+<p>Raw images are processed by a vision encoder on your device. Visual features and your question are sent to Overshoot so the cloud language model can answer. Visual features can still contain sensitive information about the image.</p>
+</blockquote>
+<h3>Inaccurate claims</h3>
+<ul>
+<li>&quot;Your data never leaves your device.&quot;</li>
+<li>&quot;Embeddings are anonymous.&quot;</li>
+<li>&quot;The server cannot infer image content.&quot;</li>
+<li>&quot;Images cannot be reconstructed.&quot;</li>
+</ul>
+<p>The server must treat features as sensitive data:</p>
+<ul>
+<li>No tensor logging by default.</li>
+<li>Short retention.</li>
+<li>Access control and encrypted internal transport.</li>
+<li>No feature values in traces, metrics labels, or crash reports.</li>
+<li>Explicit leakage evaluation against the shipped representation.</li>
+</ul>
+<h2>17. Observability</h2>
+<p>Measure each stage independently:</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Measurements</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Capability</td>
+<td>browser, OS, adapter class, feature/limit result</td>
+</tr>
+<tr>
+<td>Download</td>
+<td>exact bytes, throughput, retries, cache hit/miss</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>digest time and failure reason</td>
+</tr>
+<tr>
+<td>Session</td>
+<td>initialization time and memory</td>
+</tr>
+<tr>
+<td>Preprocessing</td>
+<td>decode, resize, normalization, patch construction</td>
+</tr>
+<tr>
+<td>Encoder</td>
+<td>cold and warm p50/p90/p95/p99</td>
+</tr>
+<tr>
+<td>Serialization</td>
+<td>conversion time and payload bytes</td>
+</tr>
+<tr>
+<td>Network</td>
+<td>upload, API, gateway, H200 TTFT</td>
+</tr>
+<tr>
+<td>Generation</td>
+<td>TTFT, completion time, output tokens</td>
+</tr>
+<tr>
+<td>Recovery</td>
+<td>device loss, cache eviction, cancellation, stale frame count</td>
+</tr>
+</tbody></table>
+<p>Telemetry should not include pixels, visual features, prompts, or model outputs by default.</p>
+<h2>18. Current evidence and unknowns</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Native M4 encoder to H200 split</td>
+<td>Qualified; about 319-352 ms p50 encoder latency</td>
+</tr>
+<tr>
+<td>Binary BF16 protocol and gateway</td>
+<td>Implemented and tested</td>
+</tr>
+<tr>
+<td>Server-side projector and vLLM path</td>
+<td>Implemented and tested</td>
+</tr>
+<tr>
+<td>Fixed-shape tower ONNX export</td>
+<td>Measured; 308,190,557 bytes</td>
+</tr>
+<tr>
+<td>ONNX Runtime CPU execution</td>
+<td>Passed as graph/operator check</td>
+</tr>
+<tr>
+<td>Browser preprocessing parity</td>
+<td>Not implemented or qualified</td>
+</tr>
+<tr>
+<td>Browser WebGPU execution</td>
+<td>Not measured</td>
+</tr>
+<tr>
+<td>Browser peak memory</td>
+<td>Not measured</td>
+</tr>
+<tr>
+<td>INT4 artifact</td>
+<td>Not produced</td>
+</tr>
+<tr>
+<td>INT4 download size</td>
+<td>Unknown</td>
+</tr>
+<tr>
+<td>INT4 composed VLM quality</td>
+<td>Unknown</td>
+</tr>
+<tr>
+<td>Browser/H200 final-answer parity</td>
+<td>Not qualified</td>
+</tr>
+<tr>
+<td>Device-loss/cache/update recovery</td>
+<td>Not implemented</td>
+</tr>
+</tbody></table>
+<p>The neural split is proven by the native client. The browser product is not proven until the unknown rows are measured on the exact artifact and target devices.</p>
+<h2>19. Implementation sequence</h2>
+<ol>
+<li>Implement exact browser preprocessing and golden tests.</li>
+<li>Create a dedicated vision Worker.</li>
+<li>Load the existing FP16 ONNX graph with WebGPU on a supported Chromium build.</li>
+<li>Record operator assignment, memory, cold latency, and warm latency.</li>
+<li>Serialize browser output into the binary feature protocol.</li>
+<li>Route the binary request through the public authenticated API to the private H200 gateway.</li>
+<li>Run feature, logit, answer, and ChartQA comparisons.</li>
+<li>Produce the INT4 candidate and count converted bytes.</li>
+<li>Repeat browser and composed quality qualification for INT4.</li>
+<li>Define and generate the manifest only from a qualified artifact.</li>
+<li>Implement CDN delivery, cache, atomic updates, and deletion.</li>
+<li>Add permissions, disclosures, route indicators, and fail-closed behavior.</li>
+<li>Qualify the supported browser/device matrix and publish its boundaries.</li>
+</ol>
+<h2>20. Reading material</h2>
+<ol>
+<li><a href="https://onnx.ai/onnx/intro/concepts.html">ONNX Concepts</a></li>
+<li><a href="https://github.com/onnx/onnx/blob/main/docs/ExternalData.md">ONNX External Data</a></li>
+<li><a href="https://onnxruntime.ai/docs/get-started/with-javascript/web.html">ONNX Runtime Web</a></li>
+<li><a href="https://onnxruntime.ai/docs/tutorials/web/ep-webgpu.html">ORT WebGPU Execution Provider</a></li>
+<li><a href="https://onnxruntime.ai/docs/tutorials/web/large-models.html">ORT Web Large Models</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers">Using Web Workers</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects">Transferable Objects</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API">WebGPU API</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/ImageBitmap">ImageBitmap</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas">OffscreenCanvas</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria">Browser Storage Quotas and Eviction</a></li>
+<li><a href="./BROWSER_WEBGPU_POC.md">Browser WebGPU export feasibility</a></li>
+<li><a href="./LOCAL_VISION_INFERENCE_LANDSCAPE.md">Full research landscape</a></li>
+</ol>
+</article>
+</main>
+</body>
+</html>

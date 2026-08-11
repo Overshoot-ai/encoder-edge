@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="How Overshoot will package, serve, and qualify a local browser vision encoder connected to a cloud language model.">
+<title>Half the Model Lives in Your Browser</title>
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #f3efe5;
+    --ink: #191916;
+    --muted: #68675f;
+    --line: #cec8b9;
+    --accent: #d94c2b;
+    --accent-soft: #f1d2c5;
+    --code: #20201c;
+    --code-ink: #f5f0e5;
+    --selection: #f0b59f;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    background:
+      linear-gradient(90deg, transparent 0, transparent calc(50% - 440px), rgba(25, 25, 22, 0.05) calc(50% - 440px), rgba(25, 25, 22, 0.05) calc(50% - 439px), transparent calc(50% - 439px)),
+      var(--paper);
+    color: var(--ink);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 19px;
+    line-height: 1.68;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--selection);
+  }
+
+  main {
+    width: min(100% - 40px, 820px);
+    margin: 0 auto;
+    padding: 52px 0 96px;
+  }
+
+  .hero {
+    margin-bottom: 72px;
+    padding-top: 34px;
+    border-top: 8px solid var(--ink);
+  }
+
+  .eyebrow {
+    margin: 0 0 26px;
+    color: var(--accent);
+    font: 700 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: Arial, Helvetica, sans-serif;
+    letter-spacing: -0.035em;
+  }
+
+  h1 {
+    max-width: 760px;
+    margin: 0;
+    font-size: clamp(52px, 9vw, 92px);
+    font-weight: 800;
+    line-height: 0.94;
+  }
+
+  .hero h2 {
+    max-width: 680px;
+    margin: 30px 0 20px;
+    padding: 0;
+    border: 0;
+    color: var(--muted);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(22px, 3vw, 30px);
+    font-weight: 400;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+  }
+
+  .dateline {
+    margin: 0;
+    color: var(--muted);
+    font: 600 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  h2 {
+    margin: 78px 0 24px;
+    padding-top: 18px;
+    border-top: 2px solid var(--ink);
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.08;
+  }
+
+  h3 {
+    margin: 52px 0 14px;
+    font-size: 26px;
+    line-height: 1.15;
+  }
+
+  p,
+  ul,
+  ol,
+  blockquote,
+  table,
+  pre {
+    margin-top: 0;
+    margin-bottom: 28px;
+  }
+
+  ul,
+  ol {
+    padding-left: 28px;
+  }
+
+  li {
+    margin: 7px 0;
+    padding-left: 4px;
+  }
+
+  blockquote {
+    margin-left: 0;
+    padding: 18px 0 18px 28px;
+    border-left: 6px solid var(--accent);
+    color: #3e3d37;
+    font-size: 1.18em;
+    font-style: italic;
+  }
+
+  blockquote p {
+    margin: 0;
+  }
+
+  a {
+    color: var(--ink);
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+
+  a:hover {
+    color: var(--accent);
+  }
+
+  code,
+  pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  }
+
+  :not(pre) > code {
+    padding: 0.12em 0.3em;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.36);
+    font-size: 0.82em;
+  }
+
+  pre {
+    overflow-x: auto;
+    padding: 24px 26px;
+    border: 1px solid #0f0f0d;
+    border-radius: 4px;
+    background: var(--code);
+    color: var(--code-ink);
+    font-size: 14px;
+    line-height: 1.58;
+    box-shadow: 8px 8px 0 var(--accent-soft);
+  }
+
+  pre code {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  th,
+  td {
+    min-width: 150px;
+    padding: 13px 15px;
+    border: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  article > p:first-of-type {
+    font-size: 1.08em;
+  }
+
+  @media (max-width: 640px) {
+    body {
+      background: var(--paper);
+      font-size: 17px;
+    }
+
+    main {
+      width: min(100% - 28px, 820px);
+      padding-top: 22px;
+    }
+
+    .hero {
+      margin-bottom: 52px;
+      padding-top: 24px;
+    }
+
+    h2 {
+      margin-top: 62px;
+    }
+
+    pre {
+      margin-right: 5px;
+      padding: 18px;
+      font-size: 12px;
+      box-shadow: 5px 5px 0 var(--accent-soft);
+    }
+  }
+
+  @media print {
+    body {
+      background: white;
+      color: black;
+    }
+
+    main {
+      width: 100%;
+      padding: 0;
+    }
+
+    a {
+      color: black;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      box-shadow: none;
+    }
+  }
+</style>
+</head>
+<body>
+<main>
+<article>
+<header class="hero">
+<p class="eyebrow">Overshoot Engineering Primer</p>
+<h1>Half the Model Lives in Your Browser</h1>
+<h2>How we will package and serve a local vision encoder without pretending the browser is an H200</h2>
+<p class="dateline">Research checked: 2026-08-10</p>
+</header>
+<p>Open the Overshoot Playground. Turn on your webcam. Ask:</p>
+<blockquote>
+<p>What is on my desk?</p>
+</blockquote>
+<p>Today, answering that question means getting the image to a machine that can run a vision-language model. The normal cloud approach is straightforward:</p>
+<pre><code class="language-text">your image -&gt; our server -&gt; vision model -&gt; language model -&gt; answer
+</code></pre>
+<p>We are building a different route:</p>
+<pre><code class="language-text">your image -&gt; local vision encoder -&gt; visual features -&gt; our server -&gt; language model -&gt; answer
+</code></pre>
+<p>In this local mode, the raw image stays on your machine. The server receives visual features instead.</p>
+<p>That sentence sounds simple. Shipping it means answering three less-simple questions:</p>
+<ol>
+<li>How do we put a neural network in a browser?</li>
+<li>How do we update it without redeploying the entire Playground?</li>
+<li>How do we make it reliable across browsers and GPUs that behave very differently?</li>
+</ol>
+<p>This is the short technical walkthrough.</p>
+<h2>The 30-second version</h2>
+<p>We package the system as three independently versioned things:</p>
+<pre><code class="language-text">1. Runtime
+   The Playground, image processor, ONNX Runtime Web, downloader, and WebGPU Worker.
+
+2. Encoder
+   A downloadable Gemma vision model package, cached by the browser.
+
+3. Rest of the model
+   The projector and language model, kept on an H200.
+</code></pre>
+<p>The proposed deployment serves them from three places:</p>
+<pre><code class="language-text">playground.overshoot.ai  -&gt; application/runtime
+models.overshoot.ai      -&gt; vision encoder package (proposed model CDN)
+api.overshoot.ai         -&gt; authenticated gateway to the H200
+</code></pre>
+<p>The user downloads the encoder once. Each image is then encoded locally into roughly 405 KB of visual features. Those features go to the H200, which runs the projector and language model and streams the answer back.</p>
+<p>The packaging pattern is established. Browser execution of our exact model is not fully qualified yet. That distinction matters, and we will return to it.</p>
+<h2>First: what are we actually splitting?</h2>
+<p>A vision-language model is not one indivisible blob. At a high level, ours looks like this:</p>
+<pre><code class="language-text">image
+  -&gt; image preprocessing
+  -&gt; vision encoder
+  -&gt; visual features [264, 768]
+  -&gt; projector block
+       -&gt; RMSNorm
+       -&gt; linear projection 768 -&gt; 2560
+  -&gt; language model
+  -&gt; answer
+</code></pre>
+<p>The vision encoder recognizes visual patterns. It turns pixels into a sequence of numbers the rest of Gemma understands.</p>
+<p>The projector block translates those 768-wide vision features into the 2,560-wide representation expected by the language model. The language model then reasons over the image and the user&#39;s question.</p>
+<p>Our split is immediately before the projector:</p>
+<pre><code class="language-text">BROWSER                                      H200
+
+image                                        [264, 768] features
+  -&gt; preprocessing                              -&gt; RMSNorm
+  -&gt; vision encoder                             -&gt; 768-to-2560 projection
+  -&gt; [264, 768] features --------------------&gt;  -&gt; language model
+                                                  -&gt; answer
+</code></pre>
+<p>Why there?</p>
+<p>Because <code>[264,768]</code> in BF16 is:</p>
+<pre><code class="language-text">264 tokens * 768 values * 2 bytes = 405,504 bytes
+</code></pre>
+<p>After the projector it becomes:</p>
+<pre><code class="language-text">264 tokens * 2,560 values * 2 bytes = 1,351,680 bytes
+</code></pre>
+<p>Moving the projector to the server makes the request about 70% smaller. RMSNorm stays with it because Gemma implements both operations as one projector block, and normalizing on the server avoids another cross-runtime numerical difference.</p>
+<h2>Three packages, not three downloads</h2>
+<p>Only two things reach the browser: the runtime and the encoder. The H200 model never does.</p>
+<h3>Package one: the runtime</h3>
+<p>The runtime is ordinary web application code:</p>
+<ul>
+<li>React UI.</li>
+<li>Video and image capture.</li>
+<li>Exact Gemma image preprocessing.</li>
+<li>ONNX Runtime Web.</li>
+<li>A dedicated Web Worker.</li>
+<li>WebGPU capability checks.</li>
+<li>Model download and cache management.</li>
+<li>BF16 feature serialization.</li>
+<li>The client for the Overshoot streaming API.</li>
+</ul>
+<p>This ships with the Playground through Vercel, just like its current JavaScript and CSS.</p>
+<p>The runtime is the player. It is not the movie.</p>
+<h2>Six browser concepts worth understanding first</h2>
+<p>The runtime list hides several different layers. They are related, but they are not synonyms and they are not additional top-level packages.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>What it is</th>
+<th>Which package owns it?</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ONNX</td>
+<td>A file format describing a neural-network graph and its tensors</td>
+<td>Encoder package</td>
+</tr>
+<tr>
+<td>ONNX Runtime Web</td>
+<td>JavaScript/WASM software that reads and executes ONNX graphs</td>
+<td>Runtime package</td>
+</tr>
+<tr>
+<td>Web Worker</td>
+<td>A background browser execution context</td>
+<td>Runtime package</td>
+</tr>
+<tr>
+<td>WebGPU</td>
+<td>The browser API used to submit work to the local GPU</td>
+<td>Browser/platform, accessed by the runtime</td>
+</tr>
+<tr>
+<td>External <code>.data</code></td>
+<td>Optional files holding large ONNX weight tensors</td>
+<td>Encoder package</td>
+</tr>
+<tr>
+<td>Manifest</td>
+<td>Our proposed package/version/checksum contract around the ONNX files</td>
+<td>Encoder package, interpreted by the runtime and server</td>
+</tr>
+</tbody></table>
+<h3>ONNX and ONNX Runtime Web are different things</h3>
+<p>An ONNX model is data. It says:</p>
+<pre><code class="language-text">input tensor
+  -&gt; matrix multiplication using weight tensor A
+  -&gt; normalization
+  -&gt; attention
+  -&gt; pooling
+  -&gt; output tensor
+</code></pre>
+<p>It contains the graph, input/output definitions, operator attributes, and either the model weights themselves or references to external weight data.</p>
+<p><a href="https://onnxruntime.ai/docs/get-started/with-javascript/web.html">ONNX Runtime Web</a> is the software that opens that file in a browser. It validates the graph, chooses an implementation for each operator, allocates tensors, submits GPU work, and returns the output.</p>
+<pre><code class="language-text">vision.onnx                   ONNX Runtime Web
+&quot;run these operations&quot;  -&gt;  &quot;I know how to run them here&quot;
+</code></pre>
+<p>ONNX is comparable to a program file. ONNX Runtime Web is the execution engine. Exporting a valid ONNX graph does not prove that every browser can execute it quickly; the runtime still needs a supported GPU implementation for the important operators.</p>
+<h3>A Web Worker is a browser background thread</h3>
+<p>JavaScript normally runs UI code on the browser&#39;s main thread. If that thread spends 800 ms preparing and launching a model, scrolling, typing, and button feedback can freeze for the same 800 ms.</p>
+<p>A <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers">Web Worker</a> has a separate JavaScript execution context:</p>
+<pre><code class="language-text">MAIN THREAD                          VISION WORKER
+
+render React UI                     load ONNX Runtime
+handle buttons       postMessage    create model session
+show progress       -------------&gt;  preprocess frame
+stream answer       &lt;-------------  run encoder
+                                     return features
+</code></pre>
+<p>Workers communicate by messages. They do not share ordinary JavaScript objects with the page. Large values should be transferred rather than copied when possible. A Worker does not make the GPU faster; it prevents CPU-side model work from blocking the interface.</p>
+<p>The Worker is code inside the runtime package. It is not a fourth package.</p>
+<h3>WebGPU capability checks are more than <code>navigator.gpu</code></h3>
+<p><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API">WebGPU</a> is the browser API that exposes GPU compute and graphics through a common interface over Metal, Direct3D 12, or Vulkan.</p>
+<p>A basic check looks like this:</p>
+<pre><code class="language-javascript">if (!navigator.gpu) throw new Error(&quot;WebGPU is unavailable&quot;);
+
+const adapter = await navigator.gpu.requestAdapter();
+if (!adapter) throw new Error(&quot;No usable GPU adapter&quot;);
+
+if (!adapter.features.has(&quot;shader-f16&quot;)) {
+  throw new Error(&quot;This GPU/browser cannot run the FP16 model&quot;);
+}
+</code></pre>
+<p>That is only the first gate. A real qualification check asks:</p>
+<pre><code class="language-text">1. Does the browser expose WebGPU?
+2. Can it return a hardware adapter?
+3. Does the adapter expose shader-f16 and sufficient limits?
+4. Does ONNX Runtime Web officially support this browser?
+5. Can ORT create a session for this exact model?
+6. Are all expensive operators assigned to WebGPU?
+7. Does a golden input produce an acceptable output quickly enough?
+</code></pre>
+<p>A machine can pass step one and fail step five. This is why &quot;WebGPU available&quot; and &quot;our encoder supported&quot; are different claims.</p>
+<h3>External <code>.data</code> files are weight storage, not extra models</h3>
+<p>An ONNX file is serialized with Protocol Buffers. It can store each weight tensor directly inside the <code>.onnx</code> file. That is what our current measured 308 MB export does.</p>
+<p>ONNX also supports <a href="https://github.com/onnx/onnx/blob/main/docs/ExternalData.md">external data</a>. In that form, the graph contains a record like:</p>
+<pre><code class="language-text">weight name: vision.layers.0.attention.q.weight
+location: weights-00.data
+offset: 8388608
+length: 1179648
+</code></pre>
+<p>The bytes live in <code>weights-00.data</code>, while the graph explains where to find them. Splitting weight storage into files does not split the neural network into separate models. It is still one logical encoder and one ONNX session.</p>
+<p>Why use external files or shards?</p>
+<ul>
+<li>A failed 16 MB download is cheaper to retry than a failed 300 MB download.</li>
+<li>Progress can be reported per file.</li>
+<li>CDN caching and verification happen in bounded pieces.</li>
+<li>ONNX itself has a 2 GB protobuf-file limit for very large models.</li>
+</ul>
+<p>Our current export is one <code>.onnx</code> file. External shards are a proposed distribution format, not something already produced by the export harness.</p>
+<h3>The manifest is our package contract, not an ONNX feature</h3>
+<p>The ONNX graph can identify its external weight filenames, offsets, and lengths. It does not know:</p>
+<ul>
+<li>Which image processor revision the Playground must use.</li>
+<li>Which browser runtime version we qualified.</li>
+<li>Which server projector revision accepts the output.</li>
+<li>Which protocol revision to put on the wire.</li>
+<li>The CDN byte count and SHA-256 digest for every file.</li>
+<li>Which browser/GPU features are required.</li>
+</ul>
+<p>That is why we propose a separate <code>manifest.json</code>:</p>
+<pre><code class="language-json">{
+  &quot;schema_version&quot;: 1,
+  &quot;model_id&quot;: &quot;gemma-4-e4b-vision&quot;,
+  &quot;model_revision&quot;: &quot;sha256:encoder-package-hash&quot;,
+  &quot;processor_revision&quot;: &quot;sha256:processor-hash&quot;,
+  &quot;split_point&quot;: &quot;vision.pre_projector&quot;,
+  &quot;protocol_version&quot;: 3,
+  &quot;runtime&quot;: {
+    &quot;name&quot;: &quot;onnxruntime-web&quot;,
+    &quot;minimum_version&quot;: &quot;1.x&quot;
+  },
+  &quot;input&quot;: {
+    &quot;shape&quot;: [1, 2376, 768],
+    &quot;dtype&quot;: &quot;float16&quot;
+  },
+  &quot;output&quot;: {
+    &quot;shape&quot;: [1, 264, 768],
+    &quot;wire_dtype&quot;: &quot;bfloat16&quot;
+  },
+  &quot;server_compatibility&quot;: [&quot;gemma-4-e4b-server-r7&quot;],
+  &quot;required_features&quot;: [&quot;webgpu&quot;, &quot;shader-f16&quot;],
+  &quot;files&quot;: [
+    {
+      &quot;path&quot;: &quot;graph.onnx&quot;,
+      &quot;bytes&quot;: 1245184,
+      &quot;sha256&quot;: &quot;...&quot;
+    },
+    {
+      &quot;path&quot;: &quot;weights-00.data&quot;,
+      &quot;bytes&quot;: 16777216,
+      &quot;sha256&quot;: &quot;...&quot;
+    }
+  ]
+}
+</code></pre>
+<p>This exact manifest does not exist yet. It is the proposed receipt for one encoder release. The downloader verifies the receipt; ONNX Runtime loads the graph and weights; the API checks that the declared encoder revision is compatible with the server projector.</p>
+<p>An encoder package may contain ten files and still be one of the three top-level packages. &quot;Package&quot; here means one versioned logical release, not one physical file.</p>
+<h3>An ImageBitmap is a transferable decoded image</h3>
+<p>The browser&#39;s <code>&lt;video&gt;</code> element owns a decoded current frame. We need to move that frame to the Worker without first turning it into a base64 string or a new JPEG.</p>
+<p><a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/createImageBitmap"><code>createImageBitmap()</code></a> creates an <a href="https://developer.mozilla.org/en-US/docs/Web/API/ImageBitmap"><code>ImageBitmap</code></a>: a browser-managed, decoded image object suitable for drawing and transferring.</p>
+<pre><code class="language-javascript">const bitmap = await createImageBitmap(videoElement);
+
+worker.postMessage(
+  { type: &quot;encode&quot;, bitmap },
+  [bitmap],
+);
+</code></pre>
+<p>The second argument transfers ownership to the Worker instead of cloning all pixel data. The Worker can draw it onto an <a href="https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas"><code>OffscreenCanvas</code></a>, perform preprocessing, and then release it with <code>bitmap.close()</code>.</p>
+<pre><code class="language-text">video decoder -&gt; ImageBitmap -&gt; Worker -&gt; OffscreenCanvas -&gt; model input tensor
+</code></pre>
+<p>An ImageBitmap is not the encoder input. It is an efficient vehicle for getting a decoded frame to the code that will construct the encoder input.</p>
+<p>Canvas resizing is also not automatically identical to our Python/PIL processor. Matching resize, crop, normalization, patch order, and rounding remains a correctness task.</p>
+<h3>Suggested prerequisite reading order</h3>
+<ol>
+<li><a href="https://onnx.ai/onnx/intro/concepts.html">ONNX Concepts</a>: graph, nodes, tensors, initializers, and operators.</li>
+<li><a href="https://onnxruntime.ai/docs/get-started/with-javascript/web.html">ONNX Runtime Web: Get Started</a>: loading and running a model in JavaScript.</li>
+<li><a href="https://onnxruntime.ai/docs/tutorials/web/large-models.html">ORT Web: Working with Large Models</a>: external data, browser limits, and caching.</li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers">Using Web Workers</a>: browser threading and message passing.</li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Transferable_objects">Transferable Objects</a>: moving large buffers without copying.</li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API">WebGPU API</a>: adapters, devices, features, and device loss.</li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/ImageBitmap">ImageBitmap</a> and <a href="https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvas">OffscreenCanvas</a>: moving and processing frames outside the UI thread.</li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Storage_API/Storage_quotas_and_eviction_criteria">Browser storage quotas and eviction</a>: why downloaded models must be treated as an evictable cache.</li>
+</ol>
+<h3>Package two: the encoder</h3>
+<p>The encoder is the large, separately downloaded model package:</p>
+<pre><code class="language-text">gemma-4-e4b-vision/&lt;content-hash&gt;/
+├── manifest.json
+├── graph.onnx
+├── weights-00.data
+├── weights-01.data
+├── processor.json
+└── checksums
+</code></pre>
+<p>The <code>.onnx</code> file describes the model&#39;s computation: matrix multiplications, attention, normalization, pooling, and the order in which they run. ONNX Runtime Web is the program that executes that description.</p>
+<p>Large weights can be stored in external <code>.data</code> shards. The manifest says exactly which graph, weights, processor, runtime, and server revision belong together.</p>
+<p>The current FP16 ONNX tower is 308,190,557 bytes. That is useful as a correctness artifact, but it is not the intended first-visit download.</p>
+<p>The Gemma E4B vision tower has roughly 150 million parameters. The ideal bit-count math is:</p>
+<pre><code class="language-text">150M weights * 16 bits ~= 300 MB at FP16/BF16
+150M weights *  4 bits ~=  75 MB at ideal packed INT4
+</code></pre>
+<p>Real weight-only INT4 is larger than 75 MB because each block needs scales and possibly zero points, some tensors remain FP16, and the graph has non-weight data. Based on that math, <strong>85-100 MB raw is a reasonable experiment-planning hypothesis</strong>.</p>
+<p>It is not a measured package size. We have not produced the INT4 graph, counted converted bytes, or measured HTTP compression. The Playground must not display a 60 MB or 82 MB promise until the generated manifest contains the real artifact byte count.</p>
+<h3>Package three: the rest of Gemma</h3>
+<p>The server package contains:</p>
+<ul>
+<li>The RMSNorm/projector block.</li>
+<li>The language model.</li>
+<li>vLLM and the H200 runtime.</li>
+<li>Compatibility support for active client encoder revisions.</li>
+</ul>
+<p>This remains inside Overshoot&#39;s infrastructure. It is not browser code and is not downloadable by users.</p>
+<h2>What happens on the first visit?</h2>
+<p>Suppose the user selects:</p>
+<pre><code class="language-text">Gemma 4 E4B
+Local vision + cloud reasoning
+</code></pre>
+<p>The Playground does not immediately throw 100 MB at their connection. It first asks the browser what it can actually do:</p>
+<pre><code class="language-text">Does WebGPU exist?
+Does this runtime support the browser?
+Does the GPU support the required FP16 feature?
+Can a small qualification graph run correctly?
+Is there enough storage for the model package?
+</code></pre>
+<p>If the machine qualifies, the user sees an explicit download:</p>
+<pre><code class="language-text">Download the local vision model
+
+This model processes images on your device.
+Expected download: calculated from the generated manifest
+Storage: this browser
+
+[Download] [Use cloud mode]
+</code></pre>
+<p>The actual byte count comes from the manifest. No mystery spinner.</p>
+<p>The browser downloads immutable, content-addressed shards from the model CDN. Each shard is checked against its SHA-256 digest before the model becomes active.</p>
+<pre><code class="language-text">download revision B
+  -&gt; verify every shard
+  -&gt; initialize WebGPU
+  -&gt; run a golden self-test
+  -&gt; mark revision B active
+  -&gt; eventually remove revision A
+</code></pre>
+<p>If a download fails halfway through, revision A still works. If the cache is later evicted, the Playground asks to download the model again. Browser storage is a cache, not a sacred vault.</p>
+<h2>What happens when the user asks a question?</h2>
+<p>The existing Playground already has a video element containing the current source. For local vision mode, the request becomes:</p>
+<pre><code class="language-text">1. Capture the newest frame as an ImageBitmap.
+2. Transfer it to the vision Worker.
+3. Resize, normalize, and construct Gemma&#39;s patch tensor.
+4. Run the ONNX encoder with WebGPU.
+5. Convert the output to the BF16 wire format.
+6. Send the question and approximately 405 KB of features.
+7. Stream the answer back with SSE.
+</code></pre>
+<p>The Worker is important. Running a 150M-parameter vision tower on the browser&#39;s main thread would make the interface appear frozen. A Worker gives the model its own execution context while the UI continues to animate, accept cancellation, and show progress.</p>
+<p>The request itself is binary:</p>
+<pre><code class="language-text">4 bytes   protocol magic
+4 bytes   metadata length
+8 bytes   tensor length
+N bytes   JSON metadata
+M bytes   raw BF16 features
+</code></pre>
+<p>The metadata identifies the model, processor, split point, shape, question, and active revision. The tensor stays binary. We do not turn 405 KB into a giant JSON list of decimal numbers.</p>
+<p>The public request goes to:</p>
+<pre><code class="language-text">POST https://api.overshoot.ai/v1/chat/completions
+Content-Type: application/x-cross-device-gemma
+Authorization: Bearer &lt;user API key&gt;
+Accept: text/event-stream
+</code></pre>
+<p>The public API authenticates the user, checks limits and revisions, and forwards the request over a private network to the H200 gateway. The browser never receives the H200&#39;s private address or credentials.</p>
+<p>The response is the same kind of SSE token stream the Playground already knows how to render.</p>
+<h2>One Playground-specific trap</h2>
+<p>Today, the Playground publishes webcam, screen, and uploaded-video tracks through LiveKit. Hosted models then refer to those frames with an <code>ovs://streams/...</code> URL.</p>
+<p>That is correct for cloud mode:</p>
+<pre><code class="language-text">camera -&gt; LiveKit -&gt; Overshoot stream -&gt; cloud vision model
+</code></pre>
+<p>It is not correct for privacy-oriented local vision mode. If we publish the track to LiveKit first, the raw frames have already left the browser.</p>
+<p>Local mode needs a separate media path:</p>
+<pre><code class="language-text">camera/screen/file -&gt; local video element -&gt; local encoder -&gt; features only
+</code></pre>
+<p>So the Playground will have two explicit modes rather than one path with a hidden optimization:</p>
+<pre><code class="language-text">Cloud
+Raw frames are sent to Overshoot.
+
+Local vision + cloud reasoning
+Raw frames stay in the browser; visual features are sent to Overshoot.
+</code></pre>
+<p>RTSP is different. Browsers generally cannot consume RTSP directly, so Overshoot must pull that stream on the server. We cannot honestly label that source as raw-frame-local.</p>
+<h2>Has anyone done this before?</h2>
+<p>Nobody we found has publicly shipped this exact consumer product end to end. But every major piece has precedent.</p>
+<h3>WebLLM: models as web application assets</h3>
+<p><a href="https://arxiv.org/abs/2412.15803">WebLLM</a> downloads quantized model shards, caches them in the browser, executes them with WebGPU in a Worker, and exposes a streaming OpenAI-style API.</p>
+<p>On an M3 Max, its paper measured about 71-80% of native MLC decode throughput for two 4-bit language models. That does not predict our encoder latency, but it establishes the packaging pattern: compiled runtime, remote model artifacts, local cache, Worker execution, and streaming output.</p>
+<h3>LlamaWeb: the browser is not one computer</h3>
+<p><a href="https://arxiv.org/abs/2605.20706">LlamaWeb</a> brought llama.cpp/GGUF models to WebGPU and tested 10 models on 16 GPUs from eight vendors.</p>
+<p>It statically plans memory and streams weights from the browser&#39;s Origin Private File System into GPU buffers. It also demonstrates the uncomfortable truth of browser ML: the same code can perform very differently across Chrome, Safari, Firefox, macOS, Windows, Linux, and mobile GPUs.</p>
+<p>That is why we qualify device/browser combinations instead of checking only <code>navigator.gpu</code>.</p>
+<h3>ONNX Runtime Web and Transformers.js: portable model execution</h3>
+<p><a href="https://onnxruntime.ai/docs/get-started/with-javascript/web.html">ONNX Runtime Web</a> and <a href="https://huggingface.co/docs/transformers.js/en/guides/webgpu">Transformers.js</a> already run image, speech, and transformer models in browsers through WebGPU and WebAssembly.</p>
+<p>ORT&#39;s documented WebGPU execution provider currently targets Chrome and Edge, not Safari or Firefox. The existence of WebGPU in a browser does not imply that ORT supports that browser.</p>
+<h3>Ollama: keep the engine and weights separate</h3>
+<p><a href="https://docs.ollama.com/faq">Ollama</a> packages a native model engine separately from downloaded model weights. The application updates on one cadence; models live in a user data directory and update on another.</p>
+<p>We are applying the same separation to the web:</p>
+<pre><code class="language-text">Playground/runtime updates frequently
+Encoder package updates deliberately
+H200 model updates independently, with compatibility overlap
+</code></pre>
+<h3>Distributed VLMs: run the vision side at the edge</h3>
+<p><a href="https://par.nsf.gov/biblio/10639785-distributed-vlms-efficient-vision-language-processing-through-cloud-edge-collaboration">Distributed VLMs</a> ran the complete vision encoder and projector on Jetson devices and sent visual tensors to a server running the language model.</p>
+<p>It reported up to 33.54% higher sustained throughput by overlapping edge encoding with server generation. That is a throughput result from a research prototype, not a claim that every individual request became 33.54% faster.</p>
+<h3>Progressive Semantic Communication: a physical split testbed</h3>
+<p><a href="https://arxiv.org/abs/2604.26508">Progressive Semantic Communication</a> put a 4-bit SmolVLM encoder on an NXP i.MX95 and the language model on an RTX 2080 Super. At a constrained 1 Mbps uplink, the full split path took 6.94 seconds versus 9.32 seconds for its cloud-only path.</p>
+<p>It proves that a complete vision encoder can run on genuinely constrained edge hardware and communicate with a separate GPU server. Its measured representation used inefficient JSON and its public code was not usable when checked, so it is evidence, not a package we can drop in.</p>
+<h3>TOFC: compress the features, not the image</h3>
+<p><a href="https://arxiv.org/abs/2503.12926">TOFC</a> ran a complete vision encoder on a Jetson AGX Orin, merged visual features, entropy-coded them, and decoded them before the server projector and LLM.</p>
+<p>It reported up to 52% fewer transmitted bytes and 63% lower system latency than a learned image codec at matched task performance. It also required model-specific training, and its public repository omitted the complete two-device transport path.</p>
+<h3>OpenGlass: nearby user-owned compute</h3>
+<p><a href="https://arxiv.org/abs/2607.03213">OpenGlass</a> built open-source camera glasses that send JPEG frames over local Wi-Fi to a nearby laptop running a complete local VLM. It reported 993 ms median query-ready-to-audio latency with resized frames.</p>
+<p>That is not our neural split, but it demonstrates another useful product lesson: local-first systems need stage-level timings, p95 latency, timeouts, abstention, and explicit handling of stale frames. A good median is not enough.</p>
+<h2>So, how reliable will ours be?</h2>
+<p>The honest answer has three parts.</p>
+<h3>The three-part packaging can be delivered reliably</h3>
+<p>&quot;Three packages&quot; describes the system boundary:</p>
+<pre><code class="language-text">runtime | encoder | server model
+</code></pre>
+<p>&quot;Reliable packaging&quot; describes how each one is versioned, downloaded, verified, activated, and rolled back. It is a property of those three packages, not a fourth package.</p>
+<p>For example, the encoder remains one logical package even if it contains a manifest, graph, processor configuration, and six weight shards.</p>
+<p>Content-addressed files, CDN delivery, checksums, retryable/resumable downloads, browser caches, version manifests, and atomic activation are established web distribution techniques.</p>
+<p>We know how to avoid half-installed models and incompatible updates.</p>
+<h3>The server path is already substantially proven</h3>
+<p>This repository already has:</p>
+<ul>
+<li>A working pre-projector split.</li>
+<li>A binary BF16 protocol.</li>
+<li>A gateway that validates and forwards features to vLLM.</li>
+<li>A server-side projector.</li>
+<li>Streaming answers.</li>
+<li>A qualified native M4 encoder path around 319-352 ms p50.</li>
+</ul>
+<p>The native path demonstrates that the model split itself works.</p>
+<h3>The browser encoder is still a qualification project</h3>
+<p>We have exported the complete fixed-shape tower to ONNX and executed it with ONNX Runtime on CPU. The artifact produces the expected <code>[264,768]</code> boundary.</p>
+<p>We have not yet proven:</p>
+<ul>
+<li>Actual WebGPU latency on the base M4.</li>
+<li>Peak browser and GPU memory.</li>
+<li>Complete WebGPU operator assignment without WASM fallback.</li>
+<li>INT4 artifact size and node coverage.</li>
+<li>INT4 composed VLM quality.</li>
+<li>Exact browser preprocessing parity.</li>
+<li>Device-loss, sleep/wake, background-tab, and cache-eviction recovery.</li>
+</ul>
+<p>So the reliability table is:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Three-package architecture</td>
+<td>Established pattern</td>
+</tr>
+<tr>
+<td>CDN download, cache, checksums, rollback</td>
+<td>Standard engineering</td>
+</tr>
+<tr>
+<td>Native M4 encoder -&gt; H200</td>
+<td>Qualified in this repository</td>
+</tr>
+<tr>
+<td>FP16 ONNX export</td>
+<td>Proven for one fixed shape and CPU execution</td>
+</tr>
+<tr>
+<td>Browser WebGPU execution</td>
+<td>Not yet measured</td>
+</tr>
+<tr>
+<td>INT4 browser model</td>
+<td>Not yet produced</td>
+</tr>
+<tr>
+<td>Browser + H200 final-answer parity</td>
+<td>Not yet qualified</td>
+</tr>
+</tbody></table>
+<p>We should not turn the yellow and red rows green with marketing copy.</p>
+<h2>What happens when something fails?</h2>
+<p>Reliability comes mostly from making failure boring.</p>
+<h3>Unsupported browser</h3>
+<p>The local model is not offered. The user can choose cloud mode.</p>
+<h3>Model download interrupted</h3>
+<p>Keep the previous revision active. Resume or retry the incomplete shards.</p>
+<h3>Browser evicts the model</h3>
+<p>Ask to download it again. Do not pretend browser storage is permanent.</p>
+<h3>WebGPU device is lost</h3>
+<p>Destroy the old session, request a new device, rebuild resources, and retry once. If local-only mode is enabled, fail closed after that.</p>
+<h3>Local encoder is slower than the requested frame rate</h3>
+<p>Do not queue every frame. Keep one request in flight, discard stale frames, and encode the newest frame when ready.</p>
+<pre><code class="language-text">encoder busy
+  -&gt; frame 101 arrives: remember it
+  -&gt; frame 102 arrives: replace 101
+  -&gt; encoder ready: process 102
+</code></pre>
+<p>An answer about the newest frame is useful. An answer about a perfectly preserved queue from ten seconds ago is not.</p>
+<h3>Local mode fails during a request</h3>
+<p>Do not silently upload the raw image. Either ask the user before switching modes or fail closed when they selected local-only behavior.</p>
+<h2>What about privacy?</h2>
+<p>The split keeps raw images out of the normal server path. That removes raw pixels and image metadata from ingress, storage, logs, and debugging systems.</p>
+<p>The features are still sensitive.</p>
+<p><a href="https://arxiv.org/abs/2507.22828">CapRecover</a> recovered labels and captions from conventional encoder features without reconstructing pixels. Other work has reconstructed image semantics and, for some model architectures, readable text from intermediate visual states.</p>
+<p>The accurate claim is:</p>
+<blockquote>
+<p>Raw images are processed on your device. The Playground sends visual features to Overshoot so the cloud language model can answer. Those features can still contain sensitive information about the image.</p>
+</blockquote>
+<p>Not:</p>
+<blockquote>
+<p>Your data never leaves your device.</p>
+</blockquote>
+<p>Features are data. They are just a more deliberate boundary than raw images.</p>
+<h2>What the finished Playground experience looks like</h2>
+<pre><code class="language-text">Open Playground
+  -&gt; choose webcam, screen, or local video
+  -&gt; select &quot;Local vision + cloud reasoning&quot;
+  -&gt; download encoder once
+  -&gt; wait for &quot;Local vision ready&quot;
+  -&gt; ask a question
+  -&gt; see &quot;Encoding locally&quot;
+  -&gt; see &quot;Sending 405 KB of visual features&quot;
+  -&gt; receive a streamed answer
+</code></pre>
+<p>Every request shows its route. The model can be deleted from browser storage. Cloud fallback is explicit. Unsupported sources are labeled honestly.</p>
+<p>The implementation is not one enormous web bundle and it is not a tiny native application hiding behind the page. It is a normal web app, a separately managed model package, and a private H200 service joined by a strict feature contract.</p>
+<pre><code class="language-text">small code, large local encoder, enormous remote reasoner
+</code></pre>
+<p>That is the whole trick.</p>
+<h2>Further reading</h2>
+<ul>
+<li><a href="./LOCAL_VISION_INFERENCE_LANDSCAPE.md">Local and Split Vision Inference: What Exists and How to Build It Properly</a></li>
+<li><a href="./BROWSER_WEBGPU_POC.md">Browser WebGPU Export Feasibility</a></li>
+<li><a href="./STEP_1_RESEARCH.md">Cross-device VLM research survey</a></li>
+<li><a href="https://arxiv.org/abs/2412.15803">WebLLM</a></li>
+<li><a href="https://arxiv.org/abs/2605.20706">LlamaWeb</a></li>
+<li><a href="https://onnxruntime.ai/docs/get-started/with-javascript/web.html">ONNX Runtime Web</a></li>
+<li><a href="https://par.nsf.gov/biblio/10639785-distributed-vlms-efficient-vision-language-processing-through-cloud-edge-collaboration">Distributed VLMs</a></li>
+<li><a href="https://arxiv.org/abs/2604.26508">Progressive Semantic Communication</a></li>
+<li><a href="https://arxiv.org/abs/2503.12926">TOFC</a></li>
+<li><a href="https://arxiv.org/abs/2607.03213">OpenGlass</a></li>
+<li><a href="https://arxiv.org/abs/2507.22828">CapRecover</a></li>
+</ul>
+</article>
+</main>
+</body>
+</html>
