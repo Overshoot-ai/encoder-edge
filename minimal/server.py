@@ -195,3 +195,7 @@ def main() -> None:
                 )
 
     HTTPServer((args.host, args.port), Handler).serve_forever()
+
+
+if __name__ == "__main__":
+    main()
