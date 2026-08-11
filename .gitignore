@@ -5,3 +5,11 @@ __pycache__/
 artifacts/
 *.log
 traces/*.json.gz
+benchmark-results/**/*.trace/
+benchmark-results/**/*.gputrace/
+benchmark-results/**/*.safetensors
+benchmark-results/**/*-toc.xml
+benchmark-results/**/*.ready
+benchmark-results/**/*.trigger
+benchmark-results/mlx-roofline/mixed-shape-corpus/cases/**/source.png
+benchmark-results/mlx-roofline/tier-a-references/cases/**/source.png
