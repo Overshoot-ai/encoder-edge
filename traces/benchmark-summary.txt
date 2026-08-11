@@ -1,0 +1,37 @@
+Warm sample, six requests, 25 generated tokens (median)
+client_preprocess_ms: 18.0
+client_encode_ms: 40.4
+client_serialize_ms: 7.9
+server_receive_ms: 224.2
+server_prepare_ms: 8.1
+gpu_ttft_ms: 46.2
+gpu_e2e_ms: 1040.7
+decode_tokens_per_second: 24.1
+client_e2e_ms: 1526.3
+request_bytes: 2705674
+
+Long sample, 76 generated tokens
+client_preprocess_ms: 21.1
+client_encode_ms: 55.6
+client_serialize_ms: 14.1
+server_receive_ms: 196.4
+server_prepare_ms: 7.8
+gpu_ttft_ms: 108.5
+gpu_e2e_ms: 4772.4
+decode_tokens_per_second: 16.1
+client_e2e_ms: 5227.8
+
+H200 utilization during the long sample
+SM: 33-35%
+Memory: 10-11%
+Power: 147-162 W
+
+PyTorch operator trace, 25 generated tokens
+aten::mm: 8,225 calls, 47.79% self CUDA time
+aten::copy_: 26,907 calls, 16.03% self CUDA time
+generic unrolled elementwise kernels: 15,725 calls, 10.96% self CUDA time
+aten::mean: 8,425 calls
+aten::pow: 16,850 calls
+aten::_cudnn_attention_forward: 1,000 calls
+aggregate self CUDA time: 369.764 ms
+aggregate self CPU time under profiler: 2.818 s
