@@ -1,0 +1,41 @@
+Full-H200 vLLM versus split vLLM ChartQA benchmark
+Date: 2026-08-03
+Dataset: HuggingFaceM4/ChartQA test split, first 200 samples
+Prompt and scoring: lm-eval chartqa
+Generation: temperature 0, max_gen_toks 512, prefix caching disabled
+
+Quality
+                             Full H200        Split
+Exact match                  26.0%            27.0%
+Relaxed accuracy             36.5%            36.5%
+Anywhere accuracy            57.0%            59.0%
+
+Latency during ChartQA
+                             Full H200        Split
+Pipeline TTFT p50            235.603 ms       385.635 ms
+Pipeline TTFT p90            319.437 ms       602.059 ms
+
+Per-sample agreement
+Exact generated strings      23/200 (11.5%)
+Exact parsed final answers   133/200 (66.5%)
+Same relaxed outcome         176/200 (88.0%)
+Both relaxed-correct         61/200
+Full-only relaxed-correct    12/200
+Split-only relaxed-correct   12/200
+
+MPS versus CUDA visual embedding check
+Shape                        [260, 3840] BF16 on both
+Bit-identical                false
+Differing BF16 values        158836/998400 (15.9%)
+Mean absolute difference     0.000227833
+Maximum absolute difference  0.125
+Cosine similarity            approximately 1.0
+
+Conclusion
+- Aggregate relaxed accuracy was identical on this 200-sample subset.
+- Full and split execution are not bit-identical.
+- Small MPS/CUDA numerical differences can change greedy generation trajectories.
+- The equal aggregate score hides 24 samples whose correctness outcome flipped direction.
+- This is a 200-sample subset, not the full 2500-sample official ChartQA run.
+
+The stage-by-stage numerical analysis is documented in vision_numerics.md.

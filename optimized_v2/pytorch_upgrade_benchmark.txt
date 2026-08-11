@@ -1,0 +1,78 @@
+PyTorch version-matched follow-up
+Date: 2026-08-03
+
+Environment
+Mac:  PyTorch 2.11.0 (70d99e998b4955e0049d13a98d77ae1b14db1f45)
+Mac:  Torchvision 0.26.0, Transformers 5.12.1
+H200: PyTorch 2.11.0+cu130 (70d99e998b4955e0049d13a98d77ae1b14db1f45)
+H200: Torchvision 0.26.0+cu130, Transformers 5.12.1
+
+MPS versus CUDA visual embedding with matched framework versions
+Image: artifacts/gemma-4-12b/sample.png
+Input shape: [1, 280, 6912]
+Input SHA256: 68b2eae05b80fd999d334ae2f080bf66914de71d6160ee7a9616fed629a92c94
+Input bits equal: true
+Deterministic algorithms: enabled on both
+
+Stage                    Differing values       Mean absolute difference   Maximum
+Input                    0/1935360              0                          0
+patch_ln1                59/1935360             0.000000305431             0.25
+patch_dense              9171/1075200           0.0267439                  256
+patch_ln2                2189/1075200           0.000100235                1
+positional_embedding     0/1075200              0                          0
+position_add             1158/1075200           0.000103416                1
+pos_norm                 5422/1075200           0.0000367993               0.5
+projection_rms_norm      4916/1075200           0.00000283404              0.03125
+projection               90034/1075200          0.0000782051               0.25
+
+Final retained embedding
+Shape: [264, 3840] BF16
+Bit-identical: false
+Differing values: 89282/1013760 (8.81%)
+Mean absolute difference: 0.0000814304
+Maximum absolute difference: 0.25
+
+ChartQA first 100 samples
+                                      Full H200     Split original  Split 2.11
+ChartQA relaxed accuracy              37/100        36/100          39/100
+Pipeline TTFT p50                     236.997 ms    404.804 ms      593.694 ms
+Pipeline TTFT p90                     324.040 ms    676.334 ms      1430.664 ms
+
+Original split versus version-matched split
+Exact generated responses equal: 72/100
+Exact parsed answers equal: 87/100
+Same correctness outcome: 97/100
+Original-only correct: 0/100
+Version-matched-only correct: 3/100
+
+Full H200 versus version-matched split
+Exact generated responses equal: 11/100
+Exact parsed answers equal: 68/100
+Same correctness outcome: 90/100
+Both correct: 33/100
+Full-only correct: 4/100
+Split-only correct: 6/100
+Both wrong: 57/100
+
+Exploratory PyTorch 2.13 split versus version-matched PyTorch 2.11 split
+ChartQA relaxed accuracy: 39/100 for both
+Exact generated responses equal: 79/100
+Exact parsed answers equal: 93/100
+Same correctness outcome: 98/100
+PyTorch 2.13-only correct: 1/100
+PyTorch 2.11-only correct: 1/100
+
+Conclusion
+- Matching the exact PyTorch commit, Torchvision version, and Transformers
+  version did not make MPS and CUDA bit-identical.
+- Split accuracy increased by three samples relative to the prior split run and
+  was two samples higher than full H200 on this 100-sample subset.
+- The version-matched split run had higher TTFT. This single ChartQA run does not
+  isolate whether that came from PyTorch, machine load, or runtime conditions.
+- Full H200 was not rerun because its CUDA environment did not change; its first
+  100 records were derived from the existing 200-sample run.
+- The prior stage-level check used a different image, so its differing-value
+  counts cannot be used as a controlled before/after comparison.
+- The exploratory PyTorch 2.13 result is retained in
+  benchmark-results/split-chartqa-100-torch213, but it is not the primary
+  full-versus-split comparison because the H200 remained on PyTorch 2.11.

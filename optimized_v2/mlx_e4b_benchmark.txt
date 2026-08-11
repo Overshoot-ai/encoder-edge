@@ -1,0 +1,285 @@
+MLX Gemma 4 E4B 4-bit benchmark
+Date: 2026-08-03
+
+Environment
+Hardware: Apple M4, 10 cores, 24 GB unified memory
+OS: macOS 26.5.1
+Model: mlx-community/gemma-4-e4b-it-4bit
+MLX: 0.32.0
+MLX-VLM: 0.6.9
+Transformers: 5.14.1
+Image: 854x480 RGB
+
+Method
+- One warmup followed by 20 sequential measured runs.
+- Temperature 0 and a unique prompt nonce per full-model run.
+- Full-local TTFT used max_tokens=1.
+- The isolated vision run retained only vision_tower and embed_vision after
+  releasing the language model, then synchronized MLX before stopping timers.
+- A separate five-run test used max_tokens=32 to measure generation throughput.
+
+Primary 20-run result
+Metric                              p50          p90
+Full-local pipeline TTFT            2653.155 ms  2748.400 ms
+Full-local pipeline E2E             2689.517 ms  2789.693 ms
+Isolated vision preprocessing       39.120 ms    74.465 ms
+Isolated vision encoding            767.974 ms   792.619 ms
+Isolated vision pipeline            803.176 ms   859.606 ms
+
+Memory and output
+Loaded full-model active memory     5.149 GB
+Full-model peak memory              5.805 GB
+Isolated vision active memory       0.337 GB
+Isolated vision peak memory         1.089 GB
+Vision output                       [1, 264, 2560] BF16
+Raw vision tensor                   1,351,680 bytes
+
+Five-run generation follow-up
+Metric                              p50          p90
+Pipeline TTFT                       2695.242 ms   2714.393 ms
+Pipeline E2E, up to 32 tokens       4664.847 ms   4826.930 ms
+Prompt throughput                   120.651 tok/s 123.136 tok/s
+Generation throughput               16.931 tok/s  19.777 tok/s
+
+End-to-end Mac/H200 split, 20 runs
+Mac encoder: mlx-community/gemma-4-e4b-it-4bit
+H200 decoder: google/gemma-4-E4B-it BF16, encoderless
+Metric                              p50          p90
+Mac preprocessing                   29.244 ms    42.225 ms
+Mac vision encoding                 813.827 ms   921.589 ms
+Binary serialization                4.009 ms     17.730 ms
+H200-side TTFT                      299.042 ms   389.489 ms
+End-to-end pipeline TTFT            1167.745 ms  1415.512 ms
+End-to-end pipeline E2E             1210.306 ms  1415.587 ms
+
+Optimized and instrumented split, 20 runs
+The MLX vision function was wrapped in mx.compile. Gateway timing starts after
+the complete request body reaches H200 and ends at the first generated content
+token. Transport timing is client-observed post-encode TTFT minus gateway TTFT.
+Metric                              p50          p90
+Mac preprocessing                   14.779 ms    19.637 ms
+Compiled Mac vision encoding        591.161 ms   668.595 ms
+Binary serialization                1.310 ms     4.228 ms
+Transport and response transit      620.583 ms   1977.349 ms
+Gateway plus vLLM decoder           33.865 ms    34.358 ms
+End-to-end pipeline TTFT            1237.530 ms  2491.891 ms
+
+Matched E4B deployment comparison, 20 runs
+Both modes used google/gemma-4-E4B-it language weights, an 854x480 image, one
+warmup, sequential unique prompts, temperature 0, and max_tokens=1. Full mode
+ran the stock vision encoder and language model on H200. Split mode ran the
+BF16 vision weights from mlx-community/gemma-4-e4b-it-4bit on the Mac and the
+encoderless BF16 language model on H200.
+Metric                              p50          p90
+Full E4B on H200 TTFT               273.888 ms   413.363 ms
+MLX Mac / H200 E4B split TTFT       1237.530 ms  2491.891 ms
+Full E4B on H200 request            24,165 bytes 24,165 bytes
+MLX Mac / H200 split request        1,351,865 B  1,351,866 B
+
+Three-way E4B comparison
+The PyTorch split uses PyTorch 2.11 and Transformers 5.12.1 on MPS with the
+official google/gemma-4-E4B-it BF16 vision weights. The adjacent MLX run uses
+the same H200 decoder, image, token count, request format, and 20-run method.
+Metric                              p50          p90
+Full E4B on H200 TTFT               273.888 ms   413.363 ms
+MLX M4 / H200 split TTFT            1109.725 ms  1295.421 ms
+PyTorch MPS / H200 split TTFT       3122.479 ms  4045.815 ms
+
+Split component comparison
+Metric                              MLX p50      PyTorch p50
+Mac preprocessing                   14.217 ms    12.586 ms
+Mac vision encoding                 601.663 ms   1767.036 ms
+Serialization                       1.407 ms     2.724 ms
+Transport and response transit      419.182 ms   1058.055 ms
+Gateway plus vLLM decoder           33.847 ms    33.618 ms
+
+The transport figures cannot isolate framework performance because WAN latency
+changed between the sequential runs. The stable local encoder measurement is
+the useful framework comparison: PyTorch MPS was 2.94x slower than compiled MLX
+for the same 264-token, width-2560 E4B output.
+
+Local model work versus H200 time to first token
+Metric                              Full H200     MLX split     PyTorch split
+Mac model work p50                  0.000 ms      434.729 ms    1781.235 ms
+H200 localhost TTFT p50             15.684 ms     23.705 ms     23.705 ms shared
+Gateway tensor conversion p50       none          10.115 ms     10.115 ms shared
+
+These are time-to-first-token measurements with max_tokens=1, not complete
+answer latency. The full-H200 time was measured by issuing the 20 requests from
+localhost on the H200, so it excludes the WAN. The split vLLM timing begins when
+the prepared request is forwarded over H200 loopback and includes vLLM API
+parsing, making 23.705 ms an upper bound on pure GPU decoder TTFT. MLX and
+PyTorch send the same tensor shape to the same decoder, so their H200 path is
+shared; their important difference is the Mac model time.
+
+Existing deployment reference
+Metric                              p50          p90
+Full Gemma 4 12B H200 TTFT          176.030 ms   196.855 ms
+Current MPS/H200 split TTFT         304.296 ms   372.912 ms
+Current PyTorch MPS preprocessing   16.500 ms    32.914 ms
+Current PyTorch MPS vision encoding 22.313 ms    26.368 ms
+
+Payload reference
+Prior full 12B H200 JPEG request    155,797 bytes p50
+Full E4B H200 JPEG request          24,165 bytes p50
+Current split BF16 tensor           2,027,520 bytes
+Current split request               2,027,718 bytes p50
+E4B BF16 tensor                     1,351,680 bytes
+E4B split request                   1,351,865 bytes p50
+
+Conclusion
+- In the three-way E4B comparison, running everything on H200 was decisively
+  faster: 273.888 ms p50 versus 1109.725 ms for the adjacent MLX split and
+  3122.479 ms for the PyTorch/MPS split.
+- The split is not slow in the H200 decoder. After the complete tensor reaches
+  the gateway, conversion plus vLLM TTFT is 33.865 ms p50. The main costs are
+  591.161 ms of Mac vision encoding and 620.583 ms of WAN/SSH upload plus return
+  transit. Transport also caused the large p90 and multi-second outliers.
+- mx.compile reduced the measured MLX vision p50 from approximately 784 ms in
+  the fixed-input profiler to 591 ms in the final end-to-end run. Replacing the
+  dense position one-hot operation with an equivalent gather produced exactly
+  the same BF16 output but no additional whole-model speedup under mx.compile.
+- Full-local MLX E4B TTFT was 9.69x the matched full-H200 E4B TTFT and 2.39x
+  the adjacent MLX/H200 E4B split TTFT at p50.
+- Replacing MLX-VLM with the regular PyTorch/MPS path did not improve latency.
+  PyTorch vision encoding measured 1767.036 ms p50, versus 601.663 ms for the
+  adjacent compiled MLX run. Its observed end-to-end p50 was 3122.479 ms.
+- MLX E4B isolated vision encoding was 34.4x the current PyTorch MPS vision
+  encoding at p50. This compares different Gemma 4 variants and software stacks,
+  so it identifies the measured deployment gap rather than one isolated cause.
+- E4B's raw BF16 output is 33.3% smaller than the current split tensor because
+  both retain 264 tokens but E4B uses width 2560 instead of 3840.
+- Moving E4B decoding to H200 reduced p50 TTFT from 2653.155 ms full-local to
+  1109.725 ms split, a 58.2% reduction. The split remains 3.6x slower than the
+  prior PyTorch-MPS/Gemma-4-12B split because MLX E4B vision encoding dominates.
+- The 343.5-second first load included checkpoint download. A later cached load
+  took 9.259 seconds, so the first-load value is not steady-state latency.
+- The H200 service now runs an encoderless google/gemma-4-E4B-it decoder. Its
+  artifact retains no vision or audio weights and accepts the Mac's width-2560
+  BF16 embeddings through the existing shape-aware binary protocol.
+
+Source data
+- benchmark-results/mlx-e4b-4bit-480p-20r.json
+- benchmark-results/mlx-e4b-4bit-generation-5r.json
+- benchmark-results/mlx-e4b-split-480p-20r.json
+- benchmark-results/mlx-e4b-split-compiled-instrumented-480p-20r.json
+- benchmark-results/mlx-e4b-split-adjacent-to-pytorch-480p-20r.json
+- benchmark-results/pytorch-mps-e4b-split-480p-20r
+- benchmark-results/full-e4b-h200-engine-local-480p-20r
+- benchmark-results/mlx-e4b-split-engine-breakdown-480p-20r.json
+- benchmark-results/e4b-local-engine-breakdown.json
+- benchmark-results/full-e4b-h200-ttft-480p-20r
+- benchmark-results/full-ttft-480p-20r
+- benchmark-results/split-ttft-480p-20r
+
+Production encoder follow-up, 2026-08-05
+
+What changed, in practical terms:
+- Request 2 GiB of MLX wired residency before loading the model so macOS does
+  not page reusable Metal state out between image shapes.
+- Replace position one-hot multiplication with an exact gather.
+- Fuse the BF16-exact 2D RoPE arithmetic and attention layout conversion into
+  one Metal kernel while preserving the stock FP32 normalization reductions.
+- Compile the 16 vision blocks in evaluated groups of three instead of one
+  memory-heavy graph. The resulting grouping is 3,3,3,3,3,1.
+
+Clean encoder-only evidence:
+- Mixed-shape p50 improved from 369.8 ms to 352.4 ms, or 4.7%.
+- Mixed-shape p90 improved from 3995.2 ms to 378.4 ms and p99 from 6869.5 ms
+  to 398.8 ms because the 15 multi-second page-in events fell to zero.
+- The exact RoPE/layout segmentation independently improved controlled fixed
+  p50 from 355.252 ms to 351.824 ms and reduced fixed peak allocation from
+  914.566 MB to 744.579 MB.
+- Tier A passed 7/7 shapes at 0 ULP, and paired local Tier B produced identical
+  text on 100/100 ChartQA samples with no correctness change.
+
+Deployment-shaped local-only rerun:
+- The current production client was rerun for one warmup plus 20 sequential
+  854x480 requests and produced 264 BF16 visual tokens.
+- Preprocessing p50 was 62.070 ms, vision encoding p50 was 647.101 ms, and
+  binary serialization p50 was 2.906 ms.
+- This rerun is not a replacement for the clean numbers above. Unrelated VM,
+  browser, and OpenCode workloads kept system load averages in the 17-21 range,
+  so the current 647.101 ms result is pressure-contaminated and is 7.6% slower
+  than the older 601.663 ms deployment row despite the code improvement.
+- No H200 tunnel was active, so no new remote or pipeline TTFT is reported.
+
+Wire format correction:
+- The optimized_v2 path does not use torch.save, base64, or a JSON tensor
+  string. It sends a small JSON metadata header followed by raw contiguous BF16
+  bytes using application/x-cross-device-gemma.
+- For [264,2560], the tensor is 1,351,680 bytes and the measured complete
+  request is 1,351,865-1,351,866 bytes. This avoids the 4/3 base64 expansion,
+  but BF16 vectors remain much larger than the source JPEG.
+
+Follow-up source data
+- benchmark-results/mlx-e4b-production-local-480p-20r.json
+- benchmark-results/mlx-roofline/mixed-shape-wired-status-quo-run2.json
+- benchmark-results/mlx-roofline/mixed-shape-segment3-rope-explicit-100.json
+
+Batch scaling follow-up, 2026-08-05
+
+True stock baseline versus complete optimized encoder:
+
+Batch    Stock p50    Optimized p50    Change         Stock peak    Optimized peak
+1        380.2 ms     345.7 ms         9.1% faster    1079.5 MB     718.6 MB
+8        3184.1 ms    2792.7 ms        12.3% faster   3244.0 MB     1312.9 MB
+
+- Stock uses one-hot positions, masked attention, and whole-graph execution.
+- Optimized uses gathered positions, unmasked equal-shape attention, exact Metal
+  RoPE/layout, and evaluated 3,3,3,3,3,1 segments.
+- Outputs were bit-identical at B1 and B8.
+- B1 throughput improved from 2.63 to 2.89 images/s and peak memory fell 33.4%.
+- B8 throughput improved from 2.51 to 2.86 images/s and peak memory fell 59.5%.
+- Optimized B8 still provided no batching gain over optimized B1: 349.1 versus
+  345.7 ms per image.
+
+Local M4 encoder:
+
+Batch    Generic p50    Optimized p50    Optimized/image    Images/s    Peak
+1        585.9 ms       581.1 ms         581.1 ms           1.72        718.6 MB
+2        1238.1 ms      1167.7 ms        583.8 ms           1.71        1093.0 MB
+4        2525.1 ms      2258.7 ms        564.7 ms           1.77        1143.8 MB
+8        4714.3 ms      4553.7 ms        569.2 ms           1.76        1312.9 MB
+
+- The batched RoPE/layout kernel passed Tier A on 7/7 cases at 0 ULP.
+- Optimized outputs were bit-identical to the generic graph at B1, B2, B4,
+  and B8.
+- The optimized graph was faster at every batch size, but M4 throughput stayed
+  between 1.71 and 1.77 images/s. B8 did not provide meaningful local scaling.
+- Absolute M4 timings were pressure-inflated by approximately 10.5 GB of swap;
+  relative interleaved results and throughput scaling are the useful evidence.
+
+Matched end-to-end concurrency:
+
+Batch    Full H200 TTFT    Full images/s    Split TTFT    Split images/s
+1        250.1 ms          4.00             877.7 ms      1.10
+2        226.7 ms          7.60             1511.3 ms     1.30
+4        566.1 ms          7.06             2796.6 ms     1.43
+8        297.9 ms          23.31            6085.4 ms     1.29
+
+Benchmark conditions:
+- Same H200 and E4B model artifacts as the earlier comparison.
+- One warmup batch and three timed batches per concurrency level.
+- Temperature 0, maximum one generated token, and prefix caching disabled.
+- Full H200 sent concurrent 854x480 JPEG requests.
+- Split used one true M4 batch encode, separated the outputs, and sent one
+  concurrent BF16 request per image.
+
+- Full H200 scaled strongly at B8: throughput reached 23.31 images/s while p50
+  TTFT remained 297.9 ms.
+- Split throughput peaked at B4 with 1.43 images/s, 30% above B1, but p50 TTFT
+  increased from 877.7 to 2796.6 ms.
+- Split B8 was worse than B4. M4 encoding took 4731.7 ms, total TTFT reached
+  6085.4 ms, and throughput fell to 1.29 images/s.
+- Request size was 79,108 bytes for full H200 and 1,351,882 bytes per split
+  request for this image, making the split request 17.1x larger.
+- Use B1 for latency-sensitive split requests. B4 is only useful as a queued
+  throughput mode. Do not use B8 on one base M4.
+
+Batch source data
+- benchmark-results/mlx-roofline/batch-stock-vs-optimized-b1-b8-10r.json
+- benchmark-results/mlx-roofline/batch-scaling-b1-b2-b4-b8-10r.json
+- benchmark-results/mlx-roofline/tier-a-rope-layout-batched-generic-kernel.json
+- benchmark-results/mlx-roofline/e2e-batch-split-b1-b2-b4-b8-3r.json
+- benchmark-results/mlx-roofline/e2e-batch-full-b1-b2-b4-b8-3r.json

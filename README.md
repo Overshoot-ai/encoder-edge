@@ -150,6 +150,18 @@ python optimized/frontend.py \
 
 Open [http://127.0.0.1:3001](http://127.0.0.1:3001).
 
+## Bit-Identical Binary Transport
+
+[`optimized_v2/`](optimized_v2/README.md) keeps the visual tensor in BF16 without quantization and sends its raw bytes over the Mac-to-H200 connection. An H200 gateway reconstructs the exact tensor, translates it to vLLM's existing `image_embeds` format over loopback, and relays the SSE response over a persistent HTTP connection.
+
+For a `[264, 3840]` BF16 tensor, the binary request is approximately `2.03 MB` instead of `2.70 MB` for the base64 tensor representation. Run the bit-identity proof with:
+
+```bash
+python -m optimized_v2.prove
+```
+
+See the [optimized v2 run guide](optimized_v2/README.md) for the gateway, tunnel, client, and frontend commands.
+
 ## High-Level Overview of the Optimized Architecture
 
 ![High-level overview of the optimized architecture](docs/architecture.png)

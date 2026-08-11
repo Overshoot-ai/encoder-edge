@@ -1,0 +1,32 @@
+Bit-identical binary transport benchmark
+Date: 2026-07-31
+Rounds: 5 warm alternating requests
+Image: artifacts/gemma-4-12b/sample.png
+Prompt: What is shown in this image?
+
+Correctness
+outputs_equal: true
+mac_to_gateway_bits_equal: true
+gateway_to_vllm_bits_equal: true
+
+Median base64 transport
+request_bytes: 2705743
+client_packaging_ms: 7.826
+remote_ttft_ms: 362.992
+pipeline_ttft_ms: 416.434
+remote_e2e_ms: 775.831
+pipeline_e2e_ms: 818.047
+
+Median binary transport
+request_bytes: 2027666
+client_packaging_ms: 0.940
+remote_ttft_ms: 270.601
+pipeline_ttft_ms: 308.413
+remote_e2e_ms: 704.875
+pipeline_e2e_ms: 742.950
+
+Improvement
+request_size: 25.061% smaller
+client_packaging: 87.989% faster
+remote_ttft: 92.391 ms faster
+pipeline_e2e: 75.097 ms faster

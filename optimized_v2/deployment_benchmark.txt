@@ -1,0 +1,36 @@
+Full-H200 vLLM versus split vLLM benchmark
+Date: 2026-07-31
+Cases: 7 hand-labeled images, 2 runs each
+Generation: temperature 0, max 80 tokens, prefix caching disabled
+Hardware: NVIDIA H200 server and Apple Silicon MPS client
+
+Quality
+                             Full H200        Split
+Mean required-concept score 71.43%           71.43%
+Strict passes               4/14             4/14
+Forbidden hallucinations    0/14             0/14
+
+Median performance
+                             Full H200        Split
+Request bytes                282721           1996967
+Client image preprocessing   0.000 ms         19.428 ms
+Client vision encoding       0.000 ms         24.380 ms
+Client packaging             1.448 ms         1.527 ms
+Remote TTFT                  260.382 ms       301.661 ms
+Pipeline TTFT                265.080 ms       366.013 ms
+Remote E2E                   798.402 ms       823.629 ms
+Pipeline E2E                 798.957 ms       896.046 ms
+
+H200 model loading
+                             Full H200        Split
+Model memory                 22.83 GiB        22.73 GiB
+Available KV cache memory    45.25 GiB        45.34 GiB
+
+Summary
+- Quality was equal on this suite; moving vision embedding to the Mac did not reduce vLLM quality.
+- The split request was 7.06x larger because BF16 visual vectors were larger than the compressed source images.
+- Full-H200 pipeline TTFT was 100.93 ms faster (27.6%).
+- Full-H200 pipeline E2E was 97.09 ms faster (10.8%).
+- Removing the H200 vision embedder saved about 0.10 GiB of loaded model memory.
+
+This is a small controlled regression suite, not a general model-quality benchmark.

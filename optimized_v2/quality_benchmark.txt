@@ -1,0 +1,31 @@
+Cross-device Gemma quality benchmark
+Date: 2026-07-31
+Cases: 7 hand-labeled deterministic VQA cases
+Scoring: required concept groups and forbidden hallucinations
+vLLM prefix caching: disabled
+
+Transformers
+mean required-concept score: 95.24%
+strict passes: 6/7
+forbidden hallucination cases: 0/7
+
+vLLM base64
+mean required-concept score: 71.43%
+strict passes: 2/7
+forbidden hallucination cases: 0/7
+
+vLLM binary
+mean required-concept score: 71.43%
+strict passes: 2/7
+forbidden hallucination cases: 0/7
+
+Transport comparison
+base64/binary outputs equal: 7/7
+BF16 tensor bits equal: true
+
+Notable failures
+- Football: Transformers identifies the quarterback passing; vLLM only identifies generic players in a game.
+- Bee: Transformers identifies a bee on a flower; vLLM fails to identify the animal.
+- Tower: Transformers identifies the tower; vLLM describes only the general building.
+
+This is a small regression suite, not a claim about general benchmark accuracy.
