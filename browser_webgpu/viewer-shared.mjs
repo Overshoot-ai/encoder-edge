@@ -10,6 +10,13 @@ export const VECTOR_ROWS = 24;
 export const INPUT_SHAPE = [1, 2376, EMBEDDING_DIMENSIONS];
 export const OUTPUT_SHAPE = [1, TOKEN_COUNT, EMBEDDING_DIMENSIONS];
 
+export function tokenDisplayPosition(token) {
+  return {
+    x: TOKEN_COLUMNS - 1 - token % TOKEN_COLUMNS,
+    y: Math.floor(token / TOKEN_COLUMNS),
+  };
+}
+
 const floatBuffer = new ArrayBuffer(4);
 const floatValue = new Float32Array(floatBuffer);
 const floatInteger = new Uint32Array(floatBuffer);

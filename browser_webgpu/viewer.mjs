@@ -4,6 +4,7 @@ import {
   TOKEN_COLUMNS,
   TOKEN_COUNT,
   TOKEN_ROWS,
+  tokenDisplayPosition,
 } from "./viewer-shared.mjs";
 
 const FRAME_INTERVAL_MS = 1000;
@@ -144,7 +145,10 @@ function drawSpatial(context) {
   ui.canvas.width = state.preview.width;
   ui.canvas.height = state.preview.height;
   const image = context.createImageData(state.preview.width, state.preview.height);
-  image.data.set(state.preview.noveltyPixels);
+  for (let token = 0; token < TOKEN_COUNT; token += 1) {
+    const { x, y } = tokenDisplayPosition(token);
+    image.data.set(state.preview.noveltyPixels.subarray(token * 4, token * 4 + 4), (y * TOKEN_COLUMNS + x) * 4);
+  }
   context.putImageData(image, 0, 0);
 }
 
@@ -156,8 +160,7 @@ function drawVectors(context) {
   const image = context.createImageData(ui.canvas.width, ui.canvas.height);
 
   for (let token = 0; token < TOKEN_COUNT; token += 1) {
-    const tokenX = token % TOKEN_COLUMNS;
-    const tokenY = Math.floor(token / TOKEN_COLUMNS);
+    const { x: tokenX, y: tokenY } = tokenDisplayPosition(token);
     for (let dimension = 0; dimension < EMBEDDING_DIMENSIONS; dimension += 1) {
       const x = tokenX * cellWidth + dimension % state.preview.vectorColumns;
       const y = tokenY * cellHeight + Math.floor(dimension / state.preview.vectorColumns);
@@ -188,8 +191,9 @@ function formatValue(value) {
 
 function showToken(token) {
   state.selectedToken = token;
+  const position = tokenDisplayPosition(token);
   ui.tokenTitle.textContent = `Token ${token}`;
-  ui.tokenPosition.textContent = `x=${token % TOKEN_COLUMNS}, y=${Math.floor(token / TOKEN_COLUMNS)} / ${EMBEDDING_DIMENSIONS} FP16 values`;
+  ui.tokenPosition.textContent = `x=${position.x}, y=${position.y} / ${EMBEDDING_DIMENSIONS} FP16 values`;
 
   const offset = token * EMBEDDING_DIMENSIONS;
   const rows = [];
@@ -215,7 +219,7 @@ function selectToken(event) {
   const y = (event.clientY - bounds.top) * ui.canvas.height / bounds.height;
 
   if (state.view === "spatial") {
-    const tokenX = Math.min(TOKEN_COLUMNS - 1, Math.floor(x));
+    const tokenX = TOKEN_COLUMNS - 1 - Math.min(TOKEN_COLUMNS - 1, Math.floor(x));
     const tokenY = Math.min(TOKEN_ROWS - 1, Math.floor(y));
     showToken(tokenY * TOKEN_COLUMNS + tokenX);
     return;
@@ -223,10 +227,11 @@ function selectToken(event) {
 
   const cellWidth = state.preview.vectorColumns + VECTOR_GAP;
   const cellHeight = state.preview.vectorRows + VECTOR_GAP;
-  const tokenX = Math.floor(x / cellWidth);
+  const displayTokenX = Math.floor(x / cellWidth);
   const tokenY = Math.floor(y / cellHeight);
   const insideVector = x % cellWidth < state.preview.vectorColumns && y % cellHeight < state.preview.vectorRows;
-  if (tokenX < TOKEN_COLUMNS && tokenY < TOKEN_ROWS && insideVector) {
+  if (displayTokenX < TOKEN_COLUMNS && tokenY < TOKEN_ROWS && insideVector) {
+    const tokenX = TOKEN_COLUMNS - 1 - displayTokenX;
     showToken(tokenY * TOKEN_COLUMNS + tokenX);
   }
 }

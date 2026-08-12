@@ -7,6 +7,7 @@ import {
   TOKEN_COLUMNS,
   TOKEN_COUNT,
   TOKEN_ROWS,
+  tokenDisplayPosition,
   VECTOR_COLUMNS,
   VECTOR_ROWS,
 } from "./viewer-shared.mjs";
@@ -34,5 +35,7 @@ assert.equal(preview.vectorBits.byteLength, bits.byteLength);
 
 const previewBits = new Uint16Array(preview.vectorBits);
 assert.equal(previewBits[5 * EMBEDDING_DIMENSIONS], bits[5 * EMBEDDING_DIMENSIONS]);
+assert.deepEqual(tokenDisplayPosition(0), { x: TOKEN_COLUMNS - 1, y: 0 });
+assert.deepEqual(tokenDisplayPosition(TOKEN_COUNT - 1), { x: 0, y: TOKEN_ROWS - 1 });
 
 console.log("Viewer module tests passed");
