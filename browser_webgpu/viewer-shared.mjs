@@ -1,3 +1,15 @@
+export const MODEL_BYTES = 307689273;
+export const MODEL_CACHE_NAME = "gemma4-e4b-webgpu-a706b29b0d586714.onnx";
+
+export const TOKEN_COLUMNS = 22;
+export const TOKEN_ROWS = 12;
+export const TOKEN_COUNT = TOKEN_COLUMNS * TOKEN_ROWS;
+export const EMBEDDING_DIMENSIONS = 768;
+export const VECTOR_COLUMNS = 32;
+export const VECTOR_ROWS = 24;
+export const INPUT_SHAPE = [1, 2376, EMBEDDING_DIMENSIONS];
+export const OUTPUT_SHAPE = [1, TOKEN_COUNT, EMBEDDING_DIMENSIONS];
+
 const floatBuffer = new ArrayBuffer(4);
 const floatValue = new Float32Array(floatBuffer);
 const floatInteger = new Uint32Array(floatBuffer);

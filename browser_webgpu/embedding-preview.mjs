@@ -1,12 +1,12 @@
-import { halfToFloat } from "./fp16.mjs";
 import {
   EMBEDDING_DIMENSIONS,
+  halfToFloat,
   TOKEN_COLUMNS,
   TOKEN_COUNT,
   TOKEN_ROWS,
   VECTOR_COLUMNS,
   VECTOR_ROWS,
-} from "./viewer-config.mjs";
+} from "./viewer-shared.mjs";
 
 const HEAT_STOPS = [
   [0, [8, 5, 30]],

@@ -1,25 +1,22 @@
-import { encodeBitmap, prepareEncoder } from "./encoder-runtime.mjs";
-import { resetEncoderSession } from "./webgpu-session.mjs";
+import { encodeFrame, prepareEncoder, resetEncoder } from "./webgpu-encoder.mjs";
 
-let queue = Promise.resolve();
-
-async function handleMessage({ id, type, bitmap }) {
+async function handle(message) {
   try {
+    const { type, bitmap } = message || {};
     if (type === "prepare") {
-      self.postMessage({ id, type: "ready", diagnostics: await prepareEncoder() });
+      const { diagnostics } = await prepareEncoder();
+      self.postMessage({ type: "ready", diagnostics });
       return;
     }
     if (type !== "encode" || !bitmap) throw new Error("Invalid viewer worker request");
 
-    const result = { id, type: "encoded", ...await encodeBitmap(bitmap) };
+    const result = { type: "encoded", ...await encodeFrame(bitmap) };
     const { preview } = result;
     self.postMessage(result, [preview.noveltyPixels, preview.vectorColors, preview.vectorBits]);
   } catch (error) {
-    resetEncoderSession();
-    self.postMessage({ id, type: "error", error: error.stack || String(error) });
+    resetEncoder();
+    self.postMessage({ type: "error", error: error.stack || String(error) });
   }
 }
 
-self.onmessage = ({ data }) => {
-  queue = queue.then(() => handleMessage(data));
-};
+self.onmessage = ({ data }) => void handle(data);

@@ -1,5 +1,5 @@
 import { join, resolve } from "node:path";
-import { MODEL_BYTES } from "./viewer-config.mjs";
+import { MODEL_BYTES } from "./viewer-shared.mjs";
 
 export const MODEL_FILENAME = "gemma4-e4b-web-fp16-fused-rmsnorm-rope-fastgelu-matmulclip.onnx";
 export { MODEL_BYTES };
