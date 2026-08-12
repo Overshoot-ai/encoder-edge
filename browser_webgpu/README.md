@@ -57,6 +57,26 @@ camera and interaction smoke test while the viewer server is running with:
 npm run smoke:viewer
 ```
 
+### Viewer code structure
+
+The viewer uses native browser modules and keeps each runtime concern separate:
+
+- `viewer.mjs` starts the application.
+- `viewer-app.mjs` owns camera and one-frame-per-second scheduling.
+- `viewer-ui.mjs` owns DOM state and token inspection.
+- `embedding-canvas.mjs` draws previews and maps clicks to tokens.
+- `encoder-client.mjs` provides the page-to-Worker request interface.
+- `viewer-worker.mjs` serializes Worker jobs.
+- `encoder-runtime.mjs` coordinates preprocessing, inference, and previews.
+- `webgpu-session.mjs` owns model caching and the WebGPU-only ORT session.
+- `image-preprocessing.mjs` packs camera pixels into the model input.
+- `embedding-preview.mjs` computes novelty and raw-vector colors.
+- `viewer-config.mjs` and `fp16.mjs` contain shared constants and numeric tools.
+
+Run the fast unit checks for the pure modules with `npm test`. The browser smoke
+test remains the end-to-end check for camera, WebGPU, visualization, selection,
+and pause behavior.
+
 ## Generate the encoder
 
 Generate the model and deterministic FP16 fixture:

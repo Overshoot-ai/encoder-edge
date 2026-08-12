@@ -38,11 +38,19 @@ try {
   const pausedAt = Number((await page.locator("#frame-count").textContent()).match(/\d+/)[0]);
   await page.waitForTimeout(1300);
   const finalCount = Number((await page.locator("#frame-count").textContent()).match(/\d+/)[0]);
+  await page.getByRole("button", { name: "Resume" }).click();
+  await page.getByRole("button", { name: "Pause" }).waitFor();
+  await page.waitForFunction((count) => {
+    const match = document.querySelector("#frame-count")?.textContent.match(/\d+/);
+    return match && Number(match[0]) > count;
+  }, finalCount, { timeout: 10 * 60 * 1000 });
+  const resumedAt = Number((await page.locator("#frame-count").textContent()).match(/\d+/)[0]);
+  await page.getByRole("button", { name: "Pause" }).click();
   const diagnostics = await page.evaluate(() => window.__gemmaEmbeddingDiagnostics);
-  if (errors.length || dimensions !== 768 || pausedAt !== finalCount) {
-    throw new Error(JSON.stringify({ errors, dimensions, pausedAt, finalCount }, null, 2));
+  if (errors.length || dimensions !== 768 || pausedAt !== finalCount || resumedAt <= finalCount) {
+    throw new Error(JSON.stringify({ errors, dimensions, pausedAt, finalCount, resumedAt }, null, 2));
   }
-  console.log(JSON.stringify({ selectedToken, dimensions, pausedAt, finalCount, diagnostics }, null, 2));
+  console.log(JSON.stringify({ selectedToken, dimensions, pausedAt, finalCount, resumedAt, diagnostics }, null, 2));
 } finally {
   await browser.close();
 }
