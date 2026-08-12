@@ -1,0 +1,11 @@
+Gemma 4 E4B WebGPU encoder
+
+This file is derived from the Gemma 4 E4B vision encoder by Google DeepMind.
+The original model and this derivative are provided under the Apache License
+2.0. A copy is in MODEL_LICENSE.
+
+Overshoot modified the model by exporting the vision encoder to a fixed-shape
+FP16 ONNX graph, selecting the pre-projector [1, 264, 768] output, and applying
+RMSNorm, RoPE, FastGELU, and MatMul+Clip graph fusions for ONNX Runtime WebGPU.
+
+Gemma 4 license: https://ai.google.dev/gemma/docs/gemma_4_license

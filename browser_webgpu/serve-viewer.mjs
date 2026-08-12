@@ -2,22 +2,17 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, relative as relativePath, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { modelPath } from "./model-release.mjs";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const workspace = resolve(root, "..");
-const modelPath = resolve(
-  process.env.VIEWER_MODEL
-    || join(
-      workspace,
-      "artifacts/browser-webgpu/gemma4-e4b-web-fp16-fused-rmsnorm-rope-fastgelu-matmulclip.onnx",
-    ),
-);
+const encoderPath = modelPath(workspace);
 const port = Number.parseInt(process.env.VIEWER_PORT || "3000", 10);
 const runtimeRoot = join(root, "node_modules/onnxruntime-web/dist");
 
-if (!existsSync(modelPath)) {
+if (!existsSync(encoderPath)) {
   throw new Error(
-    `Missing WebGPU encoder at ${modelPath}\nSet VIEWER_MODEL to the absolute path of the optimized ONNX file.`,
+    `Missing WebGPU encoder at ${encoderPath}\nRun npm run download:model, then try again.`,
   );
 }
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -50,7 +45,7 @@ const server = createServer((request, response) => {
     }
 
     let path;
-    if (url.pathname === "/model.onnx") path = modelPath;
+    if (url.pathname === "/model.onnx") path = encoderPath;
     else if (url.pathname.startsWith("/runtime/")) {
       path = localPath(runtimeRoot, decodeURIComponent(url.pathname.slice("/runtime/".length)));
     } else {
@@ -65,7 +60,7 @@ const server = createServer((request, response) => {
     }
     const details = statSync(path);
     response.writeHead(200, {
-      "Content-Type": path === modelPath
+      "Content-Type": path === encoderPath
         ? "application/octet-stream"
         : contentTypes[extname(path)] || "application/octet-stream",
       "Content-Length": details.size,
@@ -88,5 +83,5 @@ server.on("error", (error) => {
 });
 server.listen(port, "127.0.0.1", () => {
   console.log(`Gemma WebGPU embedding viewer: http://localhost:${port}`);
-  console.log(`Encoder: ${modelPath}`);
+  console.log(`Encoder: ${encoderPath}`);
 });

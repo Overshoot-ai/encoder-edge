@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "benchmark": "node patch-ort-matmul.mjs && node run.mjs",
-    "viewer": "node patch-ort-matmul.mjs && node serve-viewer.mjs",
+    "download:model": "node download-model.mjs",
+    "viewer": "node patch-ort-matmul.mjs && node download-model.mjs && node serve-viewer.mjs",
     "smoke:viewer": "node smoke-viewer.mjs",
     "postinstall": "node patch-ort-matmul.mjs"
   },

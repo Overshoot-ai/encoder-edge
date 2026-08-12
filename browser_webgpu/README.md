@@ -9,8 +9,7 @@ device-loss status, adapter capabilities, and browser-process-tree RSS.
 
 The same WebGPU encoder can run as a local camera website. The site does not use
 an API key, upload camera frames, or require an H200 decoder. It requires macOS
-with an Apple GPU, Node.js 20 or newer, current Google Chrome, and the optimized
-ONNX model generated below.
+with an Apple GPU, Node.js 20 or newer, and current Google Chrome.
 
 From a clone of this repository:
 
@@ -20,27 +19,24 @@ npm install
 npm run viewer
 ```
 
+On the first run, the command downloads the pinned 308 MB encoder release,
+verifies its byte size and SHA-256 digest while streaming it to disk, and caches
+it under `artifacts/browser-webgpu/`. Later runs verify and reuse that file.
+
 Open [http://localhost:3000](http://localhost:3000) in Chrome and allow camera
 access. Keep the terminal running while using the site and press `Ctrl+C` to
 stop it.
 
-By default, the server loads:
-
-```text
-artifacts/browser-webgpu/gemma4-e4b-web-fp16-fused-rmsnorm-rope-fastgelu-matmulclip.onnx
-```
-
-Use an explicit model location or another port when needed:
+Use another port when needed:
 
 ```bash
-VIEWER_MODEL=/absolute/path/to/gemma4-e4b-web-fp16-fused-rmsnorm-rope-fastgelu-matmulclip.onnx \
-  VIEWER_PORT=3001 npm run viewer
+VIEWER_PORT=3001 npm run viewer
 ```
 
-The model is about 308 MB and is not committed to GitHub. The viewer validates
-its exact byte size before creating an ONNX Runtime session. The first run reads
-the model from the local server and caches it in browser OPFS; later runs reuse
-that browser-local copy.
+The model is published separately from Git source under the Apache License 2.0;
+see [`MODEL_LICENSE`](MODEL_LICENSE) and [`MODEL_NOTICE`](MODEL_NOTICE). The
+browser also caches the verified file in OPFS after the local server delivers it.
+Maintainers can override `VIEWER_MODEL` or `VIEWER_MODEL_URL` for release tests.
 
 The viewer keeps one WebGPU session resident and processes the latest camera
 frame at most once per second without overlapping GPU work. `Spatial novelty`
