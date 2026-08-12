@@ -162,6 +162,23 @@ python -m optimized_v2.prove
 
 See the [optimized v2 run guide](optimized_v2/README.md) for the gateway, tunnel, client, and frontend commands.
 
+## Browser WebGPU Embedding Viewer
+
+The [`browser_webgpu`](browser_webgpu/README.md) package includes a standalone
+camera website that runs the optimized Gemma 4 E4B vision encoder locally with
+ONNX Runtime WebGPU. After generating the optimized ONNX artifact, start it with:
+
+```bash
+cd browser_webgpu
+npm install
+npm run viewer
+```
+
+Open [http://localhost:3000](http://localhost:3000) in Chrome and grant camera
+permission. No API key or H200 decoder is required. See the
+[WebGPU run guide](browser_webgpu/README.md#live-camera-embedding-viewer) for
+model generation, custom paths, diagnostics, and smoke testing.
+
 ## High-Level Overview of the Optimized Architecture
 
 ![High-level overview of the optimized architecture](docs/architecture.png)

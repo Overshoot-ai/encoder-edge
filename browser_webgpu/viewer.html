@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>Gemma 4 E4B Local Embeddings</title>
+    <link rel="stylesheet" href="/viewer.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div class="brand-copy">
+          <h1>Live camera embeddings</h1>
+          <p>Gemma 4 E4B <span></span> WebGPU <span></span> local only</p>
+        </div>
+        <div class="metrics" aria-live="polite">
+          <span id="frame-count">0 frames</span>
+          <span id="gpu-time">Waiting</span>
+          <span class="gpu"><i></i><span id="gpu-name">Apple GPU</span></span>
+          <button id="pause" type="button" disabled>Pause</button>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <div class="camera-stage">
+          <video id="camera" autoplay muted playsinline></video>
+          <div class="camera-shade"></div>
+          <div id="status" class="status"><i></i><span>Loading model and camera</span></div>
+          <div id="error" class="error" hidden></div>
+        </div>
+
+        <aside class="inspector">
+          <div class="inspector-head">
+            <div>
+              <p class="eyebrow">Local feature map</p>
+              <h2>Image tokens</h2>
+            </div>
+            <span class="local-badge">ON DEVICE</span>
+          </div>
+          <div class="inspector-body">
+            <div class="tabs" role="tablist" aria-label="Embedding visualization">
+              <button id="spatial-tab" class="active" type="button" role="tab" aria-selected="true">Spatial novelty</button>
+              <button id="vectors-tab" type="button" role="tab" aria-selected="false">264 raw vectors</button>
+            </div>
+            <div class="canvas-frame">
+              <canvas id="embedding-canvas" aria-label="Spatial visualization of local image embeddings"></canvas>
+              <div id="empty-state">The first embedding will appear here.</div>
+            </div>
+            <div class="canvas-meta">
+              <span>22 x 12 tokens</span>
+              <span>264 x 768 FP16</span>
+              <time id="captured-at">--:--:--</time>
+            </div>
+            <div class="legend">
+              <span id="legend-low">similar</span>
+              <i id="legend-bar"></i>
+              <span id="legend-high">distinctive</span>
+            </div>
+            <p id="description" class="description">Each tile is one image region. Brighter tiles differ more from the frame-wide average embedding. This shows feature novelty, not a reconstructed image.</p>
+            <section id="token-panel" class="token-panel" hidden>
+              <header>
+                <div><strong id="token-title">Token 0</strong><span id="token-position"></span></div>
+                <button id="close-token" type="button" aria-label="Close token values">Close</button>
+              </header>
+              <div id="token-values" class="token-values"></div>
+            </section>
+          </div>
+        </aside>
+      </section>
+    </main>
+    <script type="module" src="/viewer.mjs"></script>
+  </body>
+</html>

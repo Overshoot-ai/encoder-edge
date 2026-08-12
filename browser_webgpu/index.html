@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gemma 4 E4B WebGPU benchmark</title>
+  </head>
+  <body>
+    <pre id="status">Waiting for benchmark runner.</pre>
+    <script type="module">
+      const status = document.querySelector("#status");
+      const worker = new Worker("/worker.mjs", { type: "module" });
+      worker.onmessage = ({ data }) => {
+        status.textContent = JSON.stringify(data, null, 2);
+        window.__benchmarkResults.push(data);
+        if (window.__benchmarkResults.length === window.__benchmarkExpected) {
+          window.__benchmarkResult = window.__benchmarkExpected === 1
+            ? data
+            : { type: "result", repeated_results: window.__benchmarkResults };
+        } else {
+          worker.postMessage(window.__benchmarkOptions);
+        }
+      };
+      worker.onerror = ({ message, filename, lineno, colno }) => {
+        window.__benchmarkResult = {
+          type: "error",
+          error: `${message} (${filename}:${lineno}:${colno})`,
+        };
+      };
+      window.__benchmarkResults = [];
+      window.__benchmarkExpected = 1;
+      window.startBenchmark = (options) => {
+        window.__benchmarkResults = [];
+        window.__benchmarkExpected = options.repeatMessages || 1;
+        window.__benchmarkOptions = options;
+        worker.postMessage(options);
+      };
+    </script>
+  </body>
+</html>
