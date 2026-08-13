@@ -9,9 +9,12 @@ description = "Gemma 4 Unified image-embedding client/server proof of concept"
 requires-python = ">=3.10"
 dependencies = [
   "huggingface-hub>=1.4",
+  "mlx==0.32.0 ; platform_machine == 'arm64' and sys_platform == 'darwin'",
+  "mlx-vlm==0.6.9 ; platform_machine == 'arm64' and sys_platform == 'darwin'",
   "pillow>=11.0",
   "safetensors>=0.5",
   "torch>=2.8",
+  "torchvision>=0.28.0",
   "transformers>=5.12.1",
   "zstandard>=0.23",
 ]
@@ -24,6 +27,7 @@ web-export = [
 ]
 
 [project.scripts]
+edge-encoder = "cross_device_gemma.edge_encoder_cli:main"
 gemma-split-export = "cross_device_gemma.export_split:main"
 gemma-split-client = "cross_device_gemma.client:main"
 gemma-split-frontend = "cross_device_gemma.frontend:main"
@@ -32,3 +36,7 @@ gemma-split-verify = "cross_device_gemma.verify:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cross_device_gemma"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"optimized_v2/__init__.py" = "optimized_v2/__init__.py"
+"optimized_v2/mlx_vision_optimizations.py" = "optimized_v2/mlx_vision_optimizations.py"
