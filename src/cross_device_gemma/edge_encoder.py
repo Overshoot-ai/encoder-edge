@@ -489,6 +489,8 @@ class EdgeEncoder:
         progress: Callable[[str], None] | None = None,
         allow_full_download: bool = False,
         optimize: bool = True,
+        split_point: str = "vision_post_projector",
+        require_optimized: bool = False,
     ):
         if progress:
             progress(f"Resolving model: {model}")
@@ -524,6 +526,8 @@ class EdgeEncoder:
         self._device_request = device
         self._dtype_request = dtype
         self._token = token
+        self._split_point = split_point
+        self._require_optimized = require_optimized
         self._mlx = None
         try:
             from .mlx_edge_encoder import MLXGemma4E4BEncoder, qualification_reason
@@ -537,7 +541,7 @@ class EdgeEncoder:
                 if progress:
                     progress("Qualified optimization profile found: Gemma 4 E4B on MLX")
                     progress("Loading optimized MLX vision encoder")
-                self._mlx = MLXGemma4E4BEncoder(self.config, weights)
+                self._mlx = MLXGemma4E4BEncoder(self.config, weights, split_point)
                 self.backend = "mlx"
                 self.device = "mlx:gpu"
                 if progress:
@@ -546,8 +550,18 @@ class EdgeEncoder:
             if progress and self.source.identifier.lower() == "google/gemma-4-e4b-it":
                 progress(f"MLX optimization unavailable: {reason}; using PyTorch")
         except (ImportError, OSError, RuntimeError, ValueError) as error:
+            if require_optimized:
+                raise RuntimeError(f"Required optimized backend failed: {error}") from error
             if progress:
                 progress(f"MLX initialization failed: {error}; using PyTorch")
+        if require_optimized:
+            raise UnsupportedModelError(
+                f"Chat requires the qualified optimized backend: {reason}"
+            )
+        if split_point != "vision_post_projector":
+            raise UnsupportedModelError(
+                "The compatibility backend does not support this split point"
+            )
         self._initialize_pytorch()
 
     def _initialize_pytorch(self) -> None:
@@ -571,6 +585,10 @@ class EdgeEncoder:
             try:
                 return self._mlx.encode(image)
             except RuntimeError as error:
+                if self._require_optimized:
+                    self._mlx.close()
+                    self._mlx = None
+                    raise RuntimeError(f"Required optimized backend failed: {error}") from error
                 if self._progress:
                     self._progress(f"MLX encoding failed: {error}; retrying with PyTorch")
                 self._mlx.close()

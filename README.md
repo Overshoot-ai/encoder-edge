@@ -20,6 +20,49 @@ uv run edge-encoder encode \
 This writes `features.bin` and `features.bin.json`. For gated Hugging Face
 models, set `HF_TOKEN` first.
 
+## How to Run E2E
+
+Chat with a projector-aware decoder:
+
+```bash
+uv run edge-encoder chat \
+  --server https://gateway.example.com \
+  --image docs/architecture.png \
+  --prompt "What does this diagram show?"
+```
+
+Set `EDGE_ENCODER_API_KEY` when the gateway requires authentication.
+
+Pipeline independent image requests from JSONL:
+
+```jsonl
+{"id":"one","image":"images/one.jpg","prompt":"What is shown?"}
+{"id":"two","image":"images/two.jpg","prompt":"Read the chart title."}
+```
+
+```bash
+uv run edge-encoder batch \
+  --server https://gateway.example.com \
+  --input requests.jsonl \
+  --output responses.jsonl \
+  --max-in-flight 4
+```
+
+Run the gateway next to a projector-aware vLLM server:
+
+```bash
+EDGE_ENCODER_GATEWAY_API_KEY=change-me \
+uv run edge-encoder gateway \
+  --upstream http://127.0.0.1:8001 \
+  --host 0.0.0.0 \
+  --port 8002
+```
+
+The vLLM server must serve the matching `gemma-4-e4b-optimized` artifact with
+multimodal embeddings enabled. Put HTTPS in front of the gateway when exposing
+it publicly. Set `EDGE_ENCODER_SERVER_REVISION` when deploying a differently
+versioned compatible server artifact.
+
 Compare the automatic MLX optimization with PyTorch/MPS:
 
 ```bash

@@ -58,7 +58,7 @@ def qualification_reason(source, config, device: str, dtype: str) -> str | None:
 
 
 class MLXGemma4E4BEncoder:
-    def __init__(self, config, weights):
+    def __init__(self, config, weights, split_point: str = "vision_post_projector"):
         mlx_version = version("mlx")
         mlx_vlm_version = version("mlx-vlm")
         if (mlx_version, mlx_vlm_version) != (
@@ -100,9 +100,17 @@ class MLXGemma4E4BEncoder:
 
         optimize_gemma4_positions(module.vision_tower)
         fuse_gemma4_qkv_epilogue(module.vision_tower)
+        if split_point not in ("vision_pre_projector", "vision_post_projector"):
+            raise ValueError(f"Unsupported split point: {split_point}")
+        self.split_point = split_point
+        self.output_width = (
+            config.vision_config.hidden_size
+            if split_point == "vision_pre_projector"
+            else config.text_config.hidden_size
+        )
         self.encode_vision = make_segmented_gemma4_encoder(
             module.vision_tower,
-            module.embed_vision,
+            None if split_point == "vision_pre_projector" else module.embed_vision,
             segment_size=3,
             evaluate_segments=True,
         )
@@ -130,7 +138,11 @@ class MLXGemma4E4BEncoder:
         self.mx.synchronize()
         encoded = time.perf_counter()
 
-        if features.ndim != 3 or features.shape[0] != 1 or features.shape[2] != 2560:
+        if (
+            features.ndim != 3
+            or features.shape[0] != 1
+            or features.shape[2] != self.output_width
+        ):
             raise RuntimeError(f"Unexpected MLX vision output shape: {features.shape}")
         if features.dtype != self.mx.bfloat16:
             raise RuntimeError(f"Expected BF16 MLX vision output, got {features.dtype}")
@@ -157,7 +169,7 @@ class MLXGemma4E4BEncoder:
             "mlx_version": self.mlx_version,
             "mlx_vlm_version": self.mlx_vlm_version,
             "numerical_profile": "accuracy_qualified",
-            "split_point": "vision_post_projector",
+            "split_point": self.split_point,
         }
 
     def close(self) -> None:

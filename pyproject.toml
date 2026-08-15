@@ -11,6 +11,7 @@ dependencies = [
   "huggingface-hub>=1.4",
   "mlx==0.32.0 ; platform_machine == 'arm64' and sys_platform == 'darwin'",
   "mlx-vlm==0.6.9 ; platform_machine == 'arm64' and sys_platform == 'darwin'",
+  "numpy>=2.0",
   "pillow>=11.0",
   "safetensors>=0.5",
   "torch>=2.8",
